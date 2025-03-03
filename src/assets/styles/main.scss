@@ -1,0 +1,146 @@
+/* 全局样式文件 */
+
+/* 重置浏览器默认样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 14px;
+  color: #333;
+  background-color: #f5f7fa;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 全局链接样式 */
+a {
+  text-decoration: none;
+  color: #409EFF;
+  transition: color 0.3s;
+  
+  &:hover {
+    color: #66b1ff;
+  }
+}
+
+/* 全局标题样式 */
+h1, h2, h3, h4, h5, h6 {
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* 全局卡片样式 */
+.card {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+/* 全局按钮样式增强 */
+.el-button {
+  &.is-round {
+    border-radius: 20px;
+  }
+  
+  &--text {
+    padding: 0;
+  }
+}
+
+/* 全局过渡动画 */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* 思维导图节点样式 */
+.mindmap-node {
+  padding: 8px 15px;
+  border-radius: 4px;
+  background-color: #ecf5ff;
+  border: 1px solid #d9ecff;
+  color: #409EFF;
+  font-size: 14px;
+  display: inline-block;
+  margin: 4px;
+  transition: all 0.3s;
+  
+  &:hover {
+    background-color: #409EFF;
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  &.root {
+    background-color: #409EFF;
+    color: white;
+    font-weight: bold;
+    font-size: 16px;
+    padding: 10px 20px;
+  }
+  
+  &.level-1 {
+    background-color: #67C23A;
+    border-color: #e1f3d8;
+    color: white;
+  }
+  
+  &.level-2 {
+    background-color: #E6A23C;
+    border-color: #faecd8;
+    color: white;
+  }
+}
+
+/* 响应式布局辅助类 */
+.hidden-xs {
+  @media (max-width: 768px) {
+    display: none !important;
+  }
+}
+
+.hidden-sm {
+  @media (max-width: 992px) {
+    display: none !important;
+  }
+}
+
+.visible-xs {
+  display: none !important;
+  
+  @media (max-width: 768px) {
+    display: block !important;
+  }
+}
+
+/* 自定义滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
