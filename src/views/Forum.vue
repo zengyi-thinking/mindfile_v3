@@ -8,31 +8,6 @@
       </div>
     </div>
 
-    <!-- 最近上传资料展示 -->
-    <div class="recent-materials" v-if="recentMaterials.length > 0">
-      <h2 class="section-title">最近上传资料</h2>
-      <el-carousel :interval="4000" type="card" height="200px">
-        <el-carousel-item v-for="(material, index) in recentMaterials" :key="index">
-          <div class="material-card" @click="viewMaterialDetail(material)">
-            <div class="material-icon">
-              <el-icon :size="30" v-if="material.type === 'document'"><Document /></el-icon>
-              <el-icon :size="30" v-else-if="material.type === 'image'"><Picture /></el-icon>
-              <el-icon :size="30" v-else-if="material.type === 'video'"><VideoCamera /></el-icon>
-              <el-icon :size="30" v-else><Files /></el-icon>
-            </div>
-            <div class="material-info">
-              <h3>{{ material.name }}</h3>
-              <p>{{ material.description }}</p>
-              <div class="material-meta">
-                <span><el-icon><Calendar /></el-icon> {{ material.uploadDate }}</span>
-                <span><el-icon><Download /></el-icon> {{ material.downloads }}次下载</span>
-              </div>
-            </div>
-          </div>
-        </el-carousel-item>
-      </el-carousel>
-    </div>
-
     <div class="search-section">
       <el-input
         v-model="searchQuery"
@@ -122,55 +97,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { Document, Picture, VideoCamera, Files, Calendar, Download } from '@element-plus/icons-vue'
-import { getAllMaterials } from '../api/materials'
+import { ref } from 'vue'
 
-const router = useRouter()
 const searchQuery = ref('')
 const topicDialogVisible = ref(false)
-const recentMaterials = ref([])
 
 const currentUser = ref({
   role: '管理员',
   avatar: 'A'
-})
-
-// 获取最近上传的资料
-const loadRecentMaterials = async () => {
-  try {
-    const allMaterials = await getAllMaterials()
-    // 按上传日期排序，取最近的5个
-    recentMaterials.value = allMaterials
-      .sort((a, b) => new Date(b.uploadDate) - new Date(a.uploadDate))
-      .slice(0, 5)
-  } catch (error) {
-    console.error('加载最近资料失败:', error)
-  }
-}
-
-// 查看资料详情
-const viewMaterialDetail = (material) => {
-  // 将资料数据保存到localStorage，以便在详情页面获取
-  const materials = JSON.parse(localStorage.getItem('materials') || '[]')
-  const existingIndex = materials.findIndex(m => m.id === material.id)
-  
-  if (existingIndex !== -1) {
-    materials[existingIndex] = material
-  } else {
-    materials.push(material)
-  }
-  
-  localStorage.setItem('materials', JSON.stringify(materials))
-  
-  // 导航到资料详情页
-  router.push(`/materials/${material.id}`)
-}
-
-// 组件挂载时加载最近资料
-onMounted(() => {
-  loadRecentMaterials()
 })
 
 // 模拟讨论主题数据
@@ -281,73 +215,6 @@ const submitTopic = () => {
 <style lang="scss" scoped>
 .forum-container {
   padding: 20px;
-  background-color: #f9fafc;
-
-  .section-title {
-    font-size: 18px;
-    font-weight: 500;
-    margin: 0 0 15px 0;
-    color: #303133;
-  }
-
-  .recent-materials {
-    margin-bottom: 30px;
-    
-    .el-carousel__item {
-      border-radius: 8px;
-      overflow: hidden;
-    }
-    
-    .material-card {
-      height: 100%;
-      background-color: white;
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      cursor: pointer;
-      border-radius: 8px;
-      box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
-      
-      .material-icon {
-        margin-bottom: 15px;
-        color: #409EFF;
-      }
-      
-      .material-info {
-        h3 {
-          margin: 0 0 10px 0;
-          font-size: 16px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-        
-        p {
-          margin: 0 0 10px 0;
-          color: #606266;
-          font-size: 14px;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-        
-        .material-meta {
-          display: flex;
-          justify-content: space-between;
-          color: #909399;
-          font-size: 12px;
-          
-          span {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-          }
-        }
-      }
-    }
-  }
 
   .page-header {
     display: flex;
