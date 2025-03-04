@@ -14,16 +14,35 @@ body {
   background-color: #f5f7fa;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 /* 全局链接样式 */
 a {
   text-decoration: none;
   color: #409EFF;
-  transition: color 0.3s;
+  transition: all 0.3s ease;
+  position: relative;
   
   &:hover {
     color: #66b1ff;
+  }
+  
+  &.animated-link {
+    &:after {
+      content: '';
+      position: absolute;
+      width: 0;
+      height: 2px;
+      bottom: -2px;
+      left: 0;
+      background-color: #409EFF;
+      transition: width 0.3s ease;
+    }
+    
+    &:hover:after {
+      width: 100%;
+    }
   }
 }
 
@@ -36,14 +55,27 @@ h1, h2, h3, h4, h5, h6 {
 /* 全局卡片样式 */
 .card {
   background-color: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
-  padding: 20px;
-  margin-bottom: 20px;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.08);
+  padding: 24px;
+  margin-bottom: 24px;
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  border: 1px solid rgba(0, 0, 0, 0.02);
+  
+  &:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  }
+  
+  &.interactive {
+    cursor: pointer;
+  }
 }
 
 /* 全局按钮样式增强 */
 .el-button {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  
   &.is-round {
     border-radius: 20px;
   }
@@ -51,17 +83,66 @@ h1, h2, h3, h4, h5, h6 {
   &--text {
     padding: 0;
   }
+  
+  &--primary {
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+    }
+    
+    &:active {
+      transform: translateY(0);
+    }
+  }
+  
+  &--success {
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(103, 194, 58, 0.3);
+    }
+  }
+  
+  &--warning {
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(230, 162, 60, 0.3);
+    }
+  }
 }
 
 /* 全局过渡动画 */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s;
+  transition: opacity 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+/* 滑动过渡 */
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.slide-up-enter-from,
+.slide-up-leave-to {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+/* 缩放过渡 */
+.scale-enter-active,
+.scale-leave-active {
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.scale-enter-from,
+.scale-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
 }
 
 /* 思维导图节点样式 */
@@ -127,20 +208,77 @@ h1, h2, h3, h4, h5, h6 {
 
 /* 自定义滚动条样式 */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
   background: #f1f1f1;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
+  background: linear-gradient(to bottom, #c1c1c1, #a8a8a8);
+  border-radius: 4px;
+  transition: all 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: linear-gradient(to bottom, #a8a8a8, #909090);
+}
+
+/* 动画辅助类 */
+.animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-bounce {
+  animation: bounce 1s infinite;
+}
+
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+/* 阴影效果类 */
+.shadow-sm {
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-md {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.shadow-lg {
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* 渐变背景类 */
+.bg-gradient-primary {
+  background: linear-gradient(135deg, #409EFF, #64b5f6);
+  color: white;
+}
+
+.bg-gradient-success {
+  background: linear-gradient(135deg, #67C23A, #9ed048);
+  color: white;
+}
+
+.bg-gradient-warning {
+  background: linear-gradient(135deg, #E6A23C, #f5c76a);
+  color: white;
 }

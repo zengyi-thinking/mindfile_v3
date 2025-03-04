@@ -35,7 +35,7 @@
     <div class="materials-list">
       <el-row :gutter="20">
         <el-col :xs="24" :sm="12" :md="8" :lg="6" v-for="(material, index) in materials" :key="index">
-          <el-card class="material-item" shadow="hover">
+          <el-card class="material-item" shadow="hover" @click="viewMaterialDetail(material)">
             <div class="material-icon">
               <div class="icon-wrapper" :class="`${material.type}-bg`">
                 <el-icon :size="30" v-if="material.type === 'document'"><Document /></el-icon>
@@ -47,6 +47,11 @@
             <div class="material-info">
               <h3 class="material-title">{{ material.name }}</h3>
               <p class="material-desc">{{ material.description }}</p>
+              <div class="material-tags" v-if="material.tags && material.tags.length > 0">
+                <el-tag v-for="(tag, tagIndex) in material.tags" :key="tagIndex" size="small" effect="plain" class="tag-item" type="success">
+                  {{ getTagLabel(tag) }}
+                </el-tag>
+              </div>
               <div class="material-meta">
                 <el-tag size="small" type="info" effect="plain">
                   <el-icon><Calendar /></el-icon>
@@ -60,8 +65,12 @@
                   <el-icon><Files /></el-icon>
                   <span>{{ material.size }}</span>
                 </el-tag>
+                <el-tag size="small" type="primary" effect="plain">
+                  <el-icon><ChatDotRound /></el-icon>
+                  <span>评论</span>
+                </el-tag>
               </div>
-              <div class="material-actions">
+              <div class="material-actions" @click.stop>
                 <el-button type="primary" size="small" text @click="handleDownload(material)">
                   <el-icon><Download /></el-icon> 下载
                 </el-button>
@@ -70,6 +79,9 @@
                 </el-button>
                 <el-button type="danger" size="small" text @click="handleDelete(material)">
                   <el-icon><Delete /></el-icon> 删除
+                </el-button>
+                <el-button type="success" size="small" text @click="viewMaterialDetail(material)">
+                  <el-icon><ChatDotRound /></el-icon> 查看评论
                 </el-button>
               </div>
             </div>
@@ -81,32 +93,44 @@
     <!-- 上传对话框 -->
     <el-dialog v-model="uploadDialogVisible" title="上传资料" width="500px">
       <el-form :model="uploadForm" label-width="80px">
-        <el-form-item label="资料名称">
+        <el-form-item label="资料名称" required>
           <el-input v-model="uploadForm.name" placeholder="请输入资料名称" />
         </el-form-item>
         <el-form-item label="资料描述">
-          <el-input v-model="uploadForm.description" type="textarea" placeholder="请输入资料描述" />
+          <el-input v-model="uploadForm.description" type="textarea" placeholder="请输入资料描述" rows="3" />
         </el-form-item>
-        <el-form-item label="资料类型">
-          <el-select v-model="uploadForm.type" placeholder="请选择资料类型">
+        <el-form-item label="分级标签" required>
+          <el-cascader
+            v-model="uploadForm.tags"
+            :options="tagOptions"
+            :props="{ checkStrictly: true }"
+            clearable
+            placeholder="请选择分级标签"
+            style="width: 100%"
+          />
+        </el-form-item>
+        <el-form-item label="资料类型" required>
+          <el-select v-model="uploadForm.type" placeholder="请选择资料类型" style="width: 100%">
             <el-option label="文档" value="document" />
             <el-option label="图片" value="image" />
             <el-option label="视频" value="video" />
             <el-option label="其他" value="other" />
           </el-select>
         </el-form-item>
-        <el-form-item label="上传文件">
+        <el-form-item label="上传文件" required>
           <el-upload
+            class="upload-demo"
+            drag
             action="#"
             :auto-upload="false"
             :limit="1"
             :on-change="handleFileChange"
             :file-list="uploadFiles"
-            class="upload-demo"
+            :on-exceed="handleExceed"
+            :http-request="customUpload"
           >
-            <template #trigger>
-              <el-button type="primary">选择文件</el-button>
-            </template>
+            <el-icon class="el-icon--upload"><upload-filled /></el-icon>
+            <div class="el-upload__text">拖拽文件到此处或 <em>点击上传</em></div>
             <template #tip>
               <div class="el-upload__tip">请上传资料文件，大小不超过50MB</div>
             </template>
@@ -120,21 +144,63 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 上传成功对话框 -->
+    <el-dialog v-model="uploadSuccessDialogVisible" title="上传成功" width="500px">
+      <div class="upload-success-content">
+        <el-result icon="success" title="资料上传成功" sub-title="您的资料已成功上传并添加到思维导图搜索引擎">
+          <template #extra>
+            <div class="mindmap-integration-info">
+              <h4>思维导图集成信息</h4>
+              <el-descriptions :column="1" border>
+                <el-descriptions-item label="资料名称">{{ lastUploadedMaterial.name }}</el-descriptions-item>
+                <el-descriptions-item label="提取关键词">
+                  <el-tag v-for="(keyword, index) in lastUploadedKeywords" :key="index" size="small" class="keyword-tag">
+                    {{ keyword }}
+                  </el-tag>
+                </el-descriptions-item>
+                <el-descriptions-item label="资料分类">{{ lastUploadedCategory }}</el-descriptions-item>
+                <el-descriptions-item label="关联思维导图">
+                  <div v-if="relatedMindmaps.length > 0">
+                    <div v-for="(mindmap, index) in relatedMindmaps" :key="index" class="related-mindmap-item">
+                      {{ mindmap.title }}
+                    </div>
+                  </div>
+                  <div v-else>暂无关联思维导图</div>
+                </el-descriptions-item>
+              </el-descriptions>
+            </div>
+          </template>
+          <!-- 移除重复的 #extra 插槽，使用其他插槽名称 -->
+          <template #actions>
+            <el-button type="primary" @click="uploadSuccessDialogVisible = false">确定</el-button>
+            <el-button @click="viewMindmaps">查看思维导图</el-button>
+          </template>
+        </el-result>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { Document, Picture, VideoCamera, Files } from '@element-plus/icons-vue'
+import { useRouter } from 'vue-router'
+import { Document, Picture, VideoCamera, Files, Calendar, Download, Share, Delete, ChatDotRound, UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { getAllMaterials, uploadMaterial, downloadMaterial, shareMaterial, deleteMaterial, searchMaterials } from '../api/materials'
-import { addMaterialToSearchIndex } from '../api/mindmap'
+import { addMaterialToSearchIndex, getAllMindmaps } from '../api/mindmap'
 
+const router = useRouter()
 const searchQuery = ref('')
 const fileType = ref('all')
 const sortBy = ref('newest')
 const uploadDialogVisible = ref(false)
+const uploadSuccessDialogVisible = ref(false)
 const loading = ref(false)
+const lastUploadedMaterial = ref({})
+const lastUploadedKeywords = ref([])
+const lastUploadedCategory = ref('')
+const relatedMindmaps = ref([])
 
 const currentUser = ref({
   role: '管理员',
@@ -149,8 +215,40 @@ const uploadForm = ref({
   name: '',
   description: '',
   type: 'document',
-  file: null
+  file: null,
+  tags: []
 })
+
+// 标签选项数据
+const tagOptions = ref([
+  {
+    value: 'basic',
+    label: '基础知识',
+    children: [
+      { value: 'concept', label: '概念介绍' },
+      { value: 'theory', label: '理论基础' },
+      { value: 'example', label: '示例讲解' }
+    ]
+  },
+  {
+    value: 'advanced',
+    label: '进阶内容',
+    children: [
+      { value: 'technique', label: '技术方法' },
+      { value: 'application', label: '应用案例' },
+      { value: 'research', label: '研究前沿' }
+    ]
+  },
+  {
+    value: 'special',
+    label: '专题资料',
+    children: [
+      { value: 'project', label: '项目实践' },
+      { value: 'solution', label: '解决方案' },
+      { value: 'reference', label: '参考资源' }
+    ]
+  }
+])
 
 // 上传文件列表
 const uploadFiles = ref([])
@@ -162,23 +260,35 @@ const showUploadDialog = () => {
     name: '',
     description: '',
     type: 'document',
-    file: null
+    file: null,
+    tags: []
   }
   uploadFiles.value = []
 }
 
 // 提交上传
 const submitUpload = async () => {
+  if (!uploadForm.value.name) {
+    ElMessage.warning('请输入资料名称')
+    return
+  }
+  
+  if (!uploadForm.value.type) {
+    ElMessage.warning('请选择资料类型')
+    return
+  }
+  
   if (!uploadFiles.value || uploadFiles.value.length === 0) {
     ElMessage.warning('请选择要上传的文件')
     return
   }
   
-  const file = uploadFiles.value[0].raw
-  
-  if (!uploadForm.value.name) {
-    uploadForm.value.name = file.name
+  if (!uploadForm.value.tags || uploadForm.value.tags.length === 0) {
+    ElMessage.warning('请选择分级标签')
+    return
   }
+  
+  const file = uploadFiles.value[0].raw
   
   loading.value = true
   try {
@@ -187,16 +297,29 @@ const submitUpload = async () => {
       name: uploadForm.value.name,
       description: uploadForm.value.description,
       type: uploadForm.value.type,
-      uploader: currentUser.value.role
+      uploader: currentUser.value.role,
+      tags: uploadForm.value.tags
     }
     
     const newMaterial = await uploadMaterial(materialData, file)
     
     // 将资料添加到思维导图搜索引擎
-    await addMaterialToSearchIndex(newMaterial)
+    const result = await addMaterialToSearchIndex(newMaterial)
+    
+    // 保存上传结果信息
+    lastUploadedMaterial.value = newMaterial
+    lastUploadedKeywords.value = result.keywords
+    lastUploadedCategory.value = result.category
+    
+    // 获取关联的思维导图
+    const allMindmaps = await getAllMindmaps()
+    relatedMindmaps.value = allMindmaps.filter(mindmap => 
+      mindmap.relatedMaterials.includes(newMaterial.id)
+    )
     
     ElMessage.success('资料上传成功')
     uploadDialogVisible.value = false
+    uploadSuccessDialogVisible.value = true
     
     // 刷新资料列表
     loadMaterials()
@@ -288,7 +411,66 @@ const handleFileChange = (file, fileList) => {
     if (!uploadForm.value.name) {
       uploadForm.value.name = file.name
     }
+    // 保存文件到表单数据中
+    uploadForm.value.file = file.raw
   }
+}
+
+// 自定义上传处理函数
+const customUpload = async (options) => {
+  try {
+    const { file } = options
+    // 这里不需要实际上传，因为submitUpload函数会处理上传逻辑
+    // 只需要确保文件被正确添加到uploadFiles中
+    console.log('文件准备上传:', file.name)
+    return file
+  } catch (error) {
+    console.error('文件处理失败:', error)
+    ElMessage.error('文件处理失败')
+  }
+}
+
+// 处理超出文件数量限制
+const handleExceed = () => {
+  ElMessage.warning('最多只能上传1个文件')
+}
+
+// 查看资料详情
+const viewMaterialDetail = (material) => {
+  // 将资料数据保存到localStorage，以便在详情页面获取
+  const materials = JSON.parse(localStorage.getItem('materials') || '[]')
+  const existingIndex = materials.findIndex(m => m.id === material.id)
+  
+  if (existingIndex !== -1) {
+    materials[existingIndex] = material
+  } else {
+    materials.push(material)
+  }
+  
+  localStorage.setItem('materials', JSON.stringify(materials))
+  
+  // 导航到资料详情页
+  router.push(`/materials/${material.id}`)
+}
+
+// 获取标签显示名称
+const getTagLabel = (tag) => {
+  // 遍历标签选项，查找匹配的标签值
+  for (const category of tagOptions.value) {
+    // 检查是否是父级标签
+    if (category.value === tag) {
+      return category.label
+    }
+    // 检查子级标签
+    if (category.children) {
+      for (const child of category.children) {
+        if (child.value === tag) {
+          return child.label
+        }
+      }
+    }
+  }
+  return tag // 如果没找到匹配的标签，返回原始值
 }
 
 // 组件挂载时加载资料
@@ -354,8 +536,10 @@ onMounted(() => {
       padding: 20px;
       box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
       display: flex;
-      margin-bottom: 15px;
+      margin-bottom: 20px;
       transition: transform 0.3s, box-shadow 0.3s;
+      min-height: 160px;
+      overflow: hidden;
 
       &:hover {
         transform: translateY(-3px);
@@ -363,12 +547,36 @@ onMounted(() => {
       }
 
       .material-icon {
-        width: 50px;
-        height: 50px;
+        width: 60px;
+        height: 60px;
         display: flex;
         align-items: center;
         justify-content: center;
         margin-right: 15px;
+        
+        .icon-wrapper {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 8px;
+          
+          &.document-bg {
+            background-color: rgba(64, 158, 255, 0.1);
+            color: #409EFF;
+          }
+          
+          &.image-bg {
+            background-color: rgba(103, 194, 58, 0.1);
+            color: #67C23A;
+          }
+          
+          &.video-bg {
+            background-color: rgba(230, 162, 60, 0.1);
+            color: #E6A23C;
+          }
+        }
       }
 
       .material-info {
@@ -377,19 +585,42 @@ onMounted(() => {
         h3 {
           margin: 0 0 8px 0;
           font-size: 16px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
 
         p {
           margin: 0 0 10px 0;
           color: #606266;
           font-size: 14px;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          height: 40px;
+        }
+
+        .material-tags {
+          margin: 8px 0;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 5px;
+        }
+
+        .tag-item {
+          margin-right: 5px;
+          margin-bottom: 5px;
         }
 
         .material-meta {
           display: flex;
-          gap: 15px;
+          flex-wrap: wrap;
+          gap: 10px;
           color: #909399;
           font-size: 12px;
+          margin-bottom: 10px;
         }
       }
 
@@ -438,3 +669,26 @@ onMounted(() => {
   }
 }
 </style>
+.upload-success-content {
+  text-align: center;
+  
+  .mindmap-integration-info {
+    margin-top: 20px;
+    text-align: left;
+    
+    h4 {
+      margin-bottom: 15px;
+      font-weight: 500;
+      color: #409EFF;
+    }
+    
+    .keyword-tag {
+      margin-right: 5px;
+      margin-bottom: 5px;
+    }
+    
+    .related-mindmap-item {
+      padding: 5px 0;
+      border-bottom: 1px dashed #eee;
+      
+ 

@@ -114,9 +114,17 @@ const stats = ref({
 
     .dashboard-card {
       background-color: white;
-      border-radius: 8px;
+      border-radius: 12px;
       padding: 20px;
-      box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+      box-shadow: 0 4px 15px 0 rgba(0, 0, 0, 0.08);
+      transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+      position: relative;
+      overflow: hidden;
+      
+      &:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+      }
 
       .card-header {
         display: flex;
@@ -124,63 +132,127 @@ const stats = ref({
         margin-bottom: 15px;
 
         .card-icon {
-          width: 40px;
-          height: 40px;
-          border-radius: 8px;
+          width: 45px;
+          height: 45px;
+          border-radius: 12px;
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-right: 10px;
-          font-size: 20px;
+          margin-right: 12px;
+          font-size: 22px;
+          transition: all 0.3s ease;
+          box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
         }
       }
 
       h2 {
         font-size: 18px;
         margin: 0;
+        font-weight: 600;
+        background: linear-gradient(90deg, #333, #666);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
       }
 
       .card-content {
         p {
-          margin: 8px 0;
+          margin: 10px 0;
           font-size: 14px;
           color: #606266;
+          display: flex;
+          align-items: center;
+          
+          &:before {
+            content: '';
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: #dcdfe6;
+            margin-right: 8px;
+            transition: all 0.3s ease;
+          }
+        }
+        
+        &:hover p:before {
+          background-color: #409EFF;
+          transform: scale(1.2);
         }
       }
     }
 
     .mindmap-card .card-icon {
-      background-color: rgba(64, 158, 255, 0.1);
+      background: linear-gradient(135deg, rgba(64, 158, 255, 0.1), rgba(100, 181, 246, 0.2));
       color: #409EFF;
+      
+      &:hover {
+        transform: rotate(15deg);
+      }
     }
 
     .materials-card .card-icon {
-      background-color: rgba(103, 194, 58, 0.1);
+      background: linear-gradient(135deg, rgba(103, 194, 58, 0.1), rgba(158, 208, 72, 0.2));
       color: #67C23A;
+      
+      &:hover {
+        transform: rotate(-15deg);
+      }
     }
 
     .forum-card .card-icon {
-      background-color: rgba(230, 162, 60, 0.1);
+      background: linear-gradient(135deg, rgba(230, 162, 60, 0.1), rgba(245, 199, 106, 0.2));
       color: #E6A23C;
+      
+      &:hover {
+        transform: rotate(15deg);
+      }
     }
   }
 
   .recent-activities {
     background-color: white;
-    border-radius: 8px;
-    padding: 20px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    padding: 25px;
+    box-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.08);
     position: relative;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    border: 1px solid rgba(0, 0, 0, 0.02);
+    
+    &:hover {
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+    }
 
     h2 {
-      font-size: 18px;
+      font-size: 20px;
       margin: 0 0 20px 0;
+      font-weight: 600;
+      position: relative;
+      display: inline-block;
+      
+      &:after {
+        content: '';
+        position: absolute;
+        bottom: -8px;
+        left: 0;
+        width: 40px;
+        height: 3px;
+        background: linear-gradient(90deg, #409EFF, #64b5f6);
+        border-radius: 3px;
+      }
     }
 
     .view-details {
       position: absolute;
-      right: 20px;
-      top: 20px;
+      right: 25px;
+      top: 25px;
+      transition: all 0.3s ease;
+      border-radius: 20px;
+      padding: 8px 16px;
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+      }
     }
 
     .activity-chart {
@@ -188,17 +260,34 @@ const stats = ref({
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: #f5f7fa;
-      border-radius: 4px;
+      background: linear-gradient(135deg, #f5f7fa, #ffffff);
+      border-radius: 8px;
+      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.03);
+      transition: all 0.3s ease;
+      margin-top: 10px;
+      
+      &:hover {
+        box-shadow: inset 0 2px 15px rgba(0, 0, 0, 0.05);
+      }
 
       .placeholder {
         color: #909399;
+        font-size: 15px;
+        font-style: italic;
+        opacity: 0.8;
       }
     }
   }
 }
 
 @media (max-width: 768px) {
+  .dashboard-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-card {
+    margin-bottom: 15px;
+  }
   .dashboard-content {
     grid-template-columns: 1fr;
   }

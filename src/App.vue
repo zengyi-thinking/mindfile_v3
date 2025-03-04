@@ -83,14 +83,14 @@ const isAdmin = computed(() => {
   
   .sidebar {
     width: 240px;
-    background: linear-gradient(to bottom, #1a2a3a, #2c3e50);
+    background: linear-gradient(135deg, #1a2a3a, #2c3e50);
     color: white;
     display: flex;
     flex-direction: column;
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 3px 0 20px rgba(0, 0, 0, 0.15);
     position: relative;
     z-index: 10;
-    transition: all 0.3s ease;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
     
     .logo {
       padding: 20px;
@@ -100,43 +100,69 @@ const isAdmin = computed(() => {
       display: flex;
       align-items: center;
       border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      background: rgba(0, 0, 0, 0.1);
       
       .logo-icon {
         font-size: 24px;
         margin-right: 10px;
         color: #409EFF;
+        animation: pulse 2s infinite alternate;
       }
     }
     
     .nav-menu {
       display: flex;
       flex-direction: column;
-      padding-top: 10px;
+      padding-top: 15px;
       
       .nav-item {
-        padding: 12px 20px;
+        padding: 14px 20px;
         color: #e0e0e0;
         text-decoration: none;
-        transition: all 0.3s;
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
         display: flex;
         align-items: center;
         border-left: 3px solid transparent;
-        margin-bottom: 5px;
+        margin-bottom: 8px;
+        position: relative;
+        overflow: hidden;
+        
+        &:before {
+          content: '';
+          position: absolute;
+          left: 0;
+          top: 0;
+          height: 100%;
+          width: 0;
+          background: rgba(64, 158, 255, 0.15);
+          transition: width 0.3s ease;
+          z-index: -1;
+        }
         
         .el-icon {
-          margin-right: 10px;
+          margin-right: 12px;
           font-size: 18px;
+          transition: transform 0.3s ease;
         }
         
         &:hover {
-          background-color: rgba(255, 255, 255, 0.1);
           color: white;
+          transform: translateX(5px);
+          
+          &:before {
+            width: 100%;
+          }
+          
+          .el-icon {
+            transform: scale(1.2);
+          }
         }
         
         &.router-link-active {
           background-color: rgba(64, 158, 255, 0.15);
           color: #409EFF;
           border-left-color: #409EFF;
+          box-shadow: 0 2px 8px rgba(64, 158, 255, 0.2);
         }
       }
       
@@ -159,9 +185,11 @@ const isAdmin = computed(() => {
   .main-content {
     flex: 1;
     background-color: #f5f7fa;
+    background-image: linear-gradient(135deg, rgba(245, 247, 250, 0.9) 0%, rgba(255, 255, 255, 0.9) 100%);
     overflow-y: auto;
     padding: 0;
     position: relative;
+    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
     
     &.full-width {
       width: 100%;
@@ -172,12 +200,24 @@ const isAdmin = computed(() => {
 // 添加过渡动画
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease;
+  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+  transform: translateY(10px);
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
 }
 
 // 全局样式优化
@@ -189,3 +229,4 @@ body {
   color: #2c3e50;
 }
 </style>
+

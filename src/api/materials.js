@@ -1,7 +1,8 @@
 // 资料管理相关API
 import axios from 'axios'
+import { saveMaterial, saveFile, getAllMaterialsFromDB, getFileByMaterialId, deleteMaterialAndFile, searchMaterialsInDB, initializeDatabase } from './storage'
 
-// 模拟本地存储
+// 模拟本地存储 (仅用于初始化示例数据)
 const localMaterialsStorage = {
   materials: [],
   nextId: 5 // 初始ID从5开始，因为已有4个示例资料
@@ -58,22 +59,36 @@ if (localMaterialsStorage.materials.length === 0) {
 }
 
 // 获取所有资料
-export const getAllMaterials = () => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(localMaterialsStorage.materials)
-    }, 300)
-  })
+export const getAllMaterials = async () => {
+  try {
+    // 首先尝试从IndexedDB获取数据
+    const dbMaterials = await getAllMaterialsFromDB()
+    
+    // 如果数据库中没有数据，则初始化示例数据
+    if (dbMaterials.length === 0) {
+      await initializeDatabase(localMaterialsStorage.materials)
+      return await getAllMaterialsFromDB()
+    }
+    
+    return dbMaterials
+  } catch (error) {
+    console.error('获取资料失败:', error)
+    return []
+  }
 }
 
 // 上传资料
-export const uploadMaterial = (materialData, file) => {
-  return new Promise((resolve) => {
-    // 模拟文件上传处理
+export const uploadMaterial = async (materialData, file) => {
+  try {
+    // 获取所有资料以确定下一个ID
+    const allMaterials = await getAllMaterialsFromDB()
+    const nextId = allMaterials.length > 0 ? Math.max(...allMaterials.map(m => m.id)) + 1 : 1
+    
+    // 处理文件上传
     const fileSize = file ? formatFileSize(file.size) : '0MB'
     
     const newMaterial = {
-      id: localMaterialsStorage.nextId++,
+      id: nextId,
       name: materialData.name || file.name,
       description: materialData.description,
       type: materialData.type,
@@ -81,62 +96,112 @@ export const uploadMaterial = (materialData, file) => {
       size: fileSize,
       downloads: 0,
       uploader: materialData.uploader || '当前用户',
-      file: file ? URL.createObjectURL(file) : null // 在实际应用中，这里会是服务器返回的文件URL
+      hierarchicalTags: materialData.hierarchicalTags || [], // 添加分级标签
+      customTags: materialData.customTags || [] // 添加自定义标签
     }
     
-    // 添加到本地存储
-    localMaterialsStorage.materials.unshift(newMaterial)
+    // 保存资料信息到IndexedDB
+    await saveMaterial(newMaterial)
+    
+    // 如果有文件，保存文件数据到IndexedDB
+    if (file) {
+      // 将文件转换为ArrayBuffer以便存储
+      const fileReader = new FileReader()
+      fileReader.readAsArrayBuffer(file)
+      
+      await new Promise((resolve, reject) => {
+        fileReader.onload = async () => {
+          try {
+            const fileData = {
+              id: `file_${newMaterial.id}`,
+              materialId: newMaterial.id,
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              data: fileReader.result,
+              url: URL.createObjectURL(file) // 创建临时URL用于显示
+            }
+            
+            // 保存文件数据到IndexedDB
+            await saveFile(fileData)
+            resolve()
+          } catch (error) {
+            reject(error)
+          }
+        }
+        
+        fileReader.onerror = () => reject(fileReader.error)
+      })
+    }
     
     // 模拟与思维导图搜索引擎的集成
     integrateWithMindMap(newMaterial)
     
-    setTimeout(() => {
-      resolve(newMaterial)
-    }, 500)
-  })
+    return newMaterial
+  } catch (error) {
+    console.error('上传资料失败:', error)
+    throw error
+  }
 }
 
 // 下载资料
-export const downloadMaterial = (materialId) => {
-  return new Promise((resolve, reject) => {
-    const material = localMaterialsStorage.materials.find(m => m.id === materialId)
+export const downloadMaterial = async (materialId) => {
+  try {
+    // 从IndexedDB获取资料信息
+    const allMaterials = await getAllMaterialsFromDB()
+    const material = allMaterials.find(m => m.id === materialId)
     
     if (!material) {
-      reject(new Error('资料不存在'))
-      return
+      throw new Error('资料不存在')
+    }
+    
+    // 从IndexedDB获取文件数据
+    const fileData = await getFileByMaterialId(materialId)
+    
+    if (!fileData) {
+      throw new Error('文件数据不存在')
     }
     
     // 增加下载次数
     material.downloads += 1
+    await saveMaterial(material)
     
-    // 模拟下载过程
-    setTimeout(() => {
-      if (material.file) {
-        // 如果有文件URL，可以触发下载
-        const a = document.createElement('a')
-        a.href = material.file
-        a.download = material.name
-        a.click()
-      }
+    // 触发下载
+    if (fileData.url) {
+      const a = document.createElement('a')
+      a.href = fileData.url
+      a.download = material.name
+      a.click()
+    } else if (fileData.data) {
+      // 如果没有URL但有二进制数据，创建Blob并下载
+      const blob = new Blob([fileData.data], { type: fileData.type })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = material.name
+      a.click()
       
-      resolve(material)
-    }, 300)
-  })
+      // 清理URL对象
+      setTimeout(() => URL.revokeObjectURL(url), 100)
+    }
+    
+    return material
+  } catch (error) {
+    console.error('下载资料失败:', error)
+    throw error
+  }
 }
 
 // 删除资料
-export const deleteMaterial = (materialId) => {
-  return new Promise((resolve) => {
-    const index = localMaterialsStorage.materials.findIndex(m => m.id === materialId)
-    
-    if (index !== -1) {
-      localMaterialsStorage.materials.splice(index, 1)
-    }
-    
-    setTimeout(() => {
-      resolve({ success: true })
-    }, 300)
-  })
+export const deleteMaterial = async (materialId) => {
+  try {
+    // 从IndexedDB删除资料及其关联的文件
+    const result = await deleteMaterialAndFile(materialId)
+    return result
+  } catch (error) {
+    console.error('删除资料失败:', error)
+    throw error
+  }
 }
 
 // 分享资料（生成分享链接）
@@ -163,28 +228,15 @@ export const shareMaterial = (materialId) => {
 }
 
 // 搜索资料
-export const searchMaterials = (query, type = 'all') => {
-  return new Promise((resolve) => {
-    let results = [...localMaterialsStorage.materials]
-    
-    // 按关键词筛选
-    if (query) {
-      const lowerQuery = query.toLowerCase()
-      results = results.filter(material => 
-        material.name.toLowerCase().includes(lowerQuery) ||
-        material.description.toLowerCase().includes(lowerQuery)
-      )
-    }
-    
-    // 按类型筛选
-    if (type !== 'all') {
-      results = results.filter(material => material.type === type)
-    }
-    
-    setTimeout(() => {
-      resolve(results)
-    }, 300)
-  })
+export const searchMaterials = async (query, type = 'all') => {
+  try {
+    // 使用IndexedDB搜索资料
+    const results = await searchMaterialsInDB(query, type)
+    return results
+  } catch (error) {
+    console.error('搜索资料失败:', error)
+    return []
+  }
 }
 
 // 与思维导图搜索引擎集成
