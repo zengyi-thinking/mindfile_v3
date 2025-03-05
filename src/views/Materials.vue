@@ -47,10 +47,19 @@
             <div class="material-info">
               <h3 class="material-title">{{ material.name }}</h3>
               <p class="material-desc">{{ material.description }}</p>
-              <div class="material-tags" v-if="material.tags && material.tags.length > 0">
-                <el-tag v-for="(tag, tagIndex) in material.tags" :key="tagIndex" size="small" effect="plain" class="tag-item" type="success">
-                  {{ getTagLabel(tag) }}
-                </el-tag>
+              <div class="material-tags">
+                <!-- 分级标签 -->
+                <div v-if="material.hierarchicalTags && material.hierarchicalTags.length > 0" class="hierarchical-tags">
+                  <el-tag v-for="(tag, tagIndex) in material.hierarchicalTags" :key="'h-'+tagIndex" size="small" effect="plain" class="tag-item" type="success">
+                    {{ getTagLabel(tag) }}
+                  </el-tag>
+                </div>
+                <!-- 自定义标签 -->
+                <div v-if="material.customTags && material.customTags.length > 0" class="custom-tags">
+                  <el-tag v-for="(tag, tagIndex) in material.customTags" :key="'c-'+tagIndex" size="small" effect="plain" class="tag-item" type="info">
+                    {{ tag }}
+                  </el-tag>
+                </div>
               </div>
               <div class="material-meta">
                 <el-tag size="small" type="info" effect="plain">
@@ -101,13 +110,56 @@
         </el-form-item>
         <el-form-item label="分级标签" required>
           <el-cascader
-            v-model="uploadForm.tags"
+            v-model="uploadForm.hierarchicalTags"
             :options="tagOptions"
             :props="{ checkStrictly: true }"
             clearable
             placeholder="请选择分级标签"
             style="width: 100%"
           />
+        </el-form-item>
+        <el-form-item label="自定义标签">
+          <div class="custom-tag-input">
+            <el-input 
+              v-model="newCustomTag" 
+              placeholder="输入自定义标签" 
+              class="tag-input"
+              @keyup.enter="addCustomTag"
+            >
+              <template #append>
+                <el-button @click="addCustomTag">添加</el-button>
+              </template>
+            </el-input>
+          </div>
+          <div class="custom-tags-container" v-if="uploadForm.customTags && uploadForm.customTags.length > 0">
+            <el-tag
+              v-for="(tag, index) in uploadForm.customTags"
+              :key="index"
+              closable
+              @close="removeCustomTag(index)"
+              class="custom-tag-item"
+              type="info"
+              effect="plain"
+            >
+              {{ tag }}
+            </el-tag>
+          </div>
+          <div class="recommended-tags">
+            <div class="recommended-tags-title">推荐标签：</div>
+            <div class="recommended-tags-list">
+              <el-tag
+                v-for="(tag, index) in customTags"
+                :key="'rec-'+index"
+                @click="addRecommendedTag(tag)"
+                class="recommended-tag-item"
+                type="success"
+                effect="plain"
+                size="small"
+              >
+                {{ tag }}
+              </el-tag>
+            </div>
+          </div>
         </el-form-item>
         <el-form-item label="资料类型" required>
           <el-select v-model="uploadForm.type" placeholder="请选择资料类型" style="width: 100%">
@@ -216,42 +268,74 @@ const uploadForm = ref({
   description: '',
   type: 'document',
   file: null,
-  tags: []
+  hierarchicalTags: [],
+  customTags: []
 })
 
 // 标签选项数据
-const tagOptions = ref([
-  {
-    value: 'basic',
-    label: '基础知识',
-    children: [
-      { value: 'concept', label: '概念介绍' },
-      { value: 'theory', label: '理论基础' },
-      { value: 'example', label: '示例讲解' }
-    ]
-  },
-  {
-    value: 'advanced',
-    label: '进阶内容',
-    children: [
-      { value: 'technique', label: '技术方法' },
-      { value: 'application', label: '应用案例' },
-      { value: 'research', label: '研究前沿' }
-    ]
-  },
-  {
-    value: 'special',
-    label: '专题资料',
-    children: [
-      { value: 'project', label: '项目实践' },
-      { value: 'solution', label: '解决方案' },
-      { value: 'reference', label: '参考资源' }
-    ]
-  }
-])
+import { hierarchicalTags, recommendedCustomTags, getPrimaryCategories, getSecondaryCategories, getTertiaryTags } from '../config/tags'
+
+// 转换分级标签为级联选择器格式
+const tagOptions = ref([])
+
+// 自定义标签
+const customTags = ref([])
+const newCustomTag = ref('')
+
+// 初始化标签选项
+const initTagOptions = () => {
+  const primaryCategories = getPrimaryCategories()
+  tagOptions.value = primaryCategories.map(primary => {
+    const secondaryCategories = getSecondaryCategories(primary)
+    return {
+      value: primary,
+      label: primary,
+      children: secondaryCategories.map(secondary => {
+        const tertiaryTags = getTertiaryTags(primary, secondary)
+        return {
+          value: secondary,
+          label: secondary,
+          children: tertiaryTags.map(tertiary => ({
+            value: tertiary,
+            label: tertiary
+          }))
+        }
+      })
+    }
+  })
+  
+  // 初始化推荐自定义标签
+  customTags.value = recommendedCustomTags
+}
 
 // 上传文件列表
 const uploadFiles = ref([])
+
+// 添加自定义标签
+const addCustomTag = () => {
+  if (newCustomTag.value && newCustomTag.value.trim()) {
+    if (!uploadForm.value.customTags.includes(newCustomTag.value.trim())) {
+      uploadForm.value.customTags.push(newCustomTag.value.trim())
+      newCustomTag.value = ''
+    } else {
+      ElMessage.warning('该标签已存在')
+    }
+  }
+}
+
+// 删除自定义标签
+const removeCustomTag = (index) => {
+  uploadForm.value.customTags.splice(index, 1)
+}
+
+// 添加推荐标签
+const addRecommendedTag = (tag) => {
+  if (!uploadForm.value.customTags.includes(tag)) {
+    uploadForm.value.customTags.push(tag)
+  } else {
+    ElMessage.warning('该标签已存在')
+  }
+}
 
 // 显示上传对话框
 const showUploadDialog = () => {
@@ -261,9 +345,11 @@ const showUploadDialog = () => {
     description: '',
     type: 'document',
     file: null,
-    tags: []
+    hierarchicalTags: [],
+    customTags: []
   }
   uploadFiles.value = []
+  newCustomTag.value = ''
 }
 
 // 提交上传
@@ -283,7 +369,7 @@ const submitUpload = async () => {
     return
   }
   
-  if (!uploadForm.value.tags || uploadForm.value.tags.length === 0) {
+  if (!uploadForm.value.hierarchicalTags || uploadForm.value.hierarchicalTags.length === 0) {
     ElMessage.warning('请选择分级标签')
     return
   }
@@ -298,7 +384,8 @@ const submitUpload = async () => {
       description: uploadForm.value.description,
       type: uploadForm.value.type,
       uploader: currentUser.value.role,
-      tags: uploadForm.value.tags
+      hierarchicalTags: uploadForm.value.hierarchicalTags,
+      customTags: uploadForm.value.customTags
     }
     
     const newMaterial = await uploadMaterial(materialData, file)
@@ -473,9 +560,10 @@ const getTagLabel = (tag) => {
   return tag // 如果没找到匹配的标签，返回原始值
 }
 
-// 组件挂载时加载资料
+// 组件挂载时加载资料和初始化标签选项
 onMounted(() => {
   loadMaterials()
+  initTagOptions()
 })
 </script>
 
@@ -506,6 +594,52 @@ onMounted(() => {
 
       .avatar {
         background-color: #409EFF;
+      }
+    }
+  }
+  
+  // 自定义标签样式
+  .custom-tag-input {
+    margin-bottom: 10px;
+    
+    .tag-input {
+      width: 100%;
+    }
+  }
+  
+  .custom-tags-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 15px;
+    
+    .custom-tag-item {
+      cursor: default;
+    }
+  }
+  
+  .recommended-tags {
+    margin-top: 15px;
+    
+    .recommended-tags-title {
+      font-size: 14px;
+      color: #606266;
+      margin-bottom: 8px;
+    }
+    
+    .recommended-tags-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      
+      .recommended-tag-item {
+        cursor: pointer;
+        transition: all 0.3s;
+        
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
       }
     }
   }
@@ -604,6 +738,12 @@ onMounted(() => {
 
         .material-tags {
           margin: 8px 0;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        .hierarchical-tags, .custom-tags {
           display: flex;
           flex-wrap: wrap;
           gap: 5px;
