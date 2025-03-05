@@ -4,20 +4,23 @@
       <h1>个人中心</h1>
       <div class="user-info">
         <span>{{ currentUser.role }}</span>
-        <el-avatar :size="40" class="avatar">{{ currentUser.avatar }}</el-avatar>
+        <el-avatar v-if="userAvatar" :size="40" class="avatar" :src="userAvatar"></el-avatar>
+        <el-avatar v-else :size="40" class="avatar">{{ currentUser.avatar }}</el-avatar>
       </div>
     </div>
 
     <div class="profile-content">
       <div class="user-card">
         <div class="user-avatar">
-          <el-avatar :size="100" class="large-avatar">{{ currentUser.avatar }}</el-avatar>
+          <el-avatar v-if="userAvatar" :size="100" class="large-avatar" :src="userAvatar"></el-avatar>
+          <el-avatar v-else :size="100" class="large-avatar">{{ currentUser.avatar }}</el-avatar>
         </div>
         <div class="user-details">
-          <h2>{{ currentUser.role }}</h2>
+          <h2>{{ currentUser.username || currentUser.role }}</h2>
           <div class="user-meta">
             <p>邮箱: {{ currentUser.email }}</p>
             <p>注册时间: {{ currentUser.registerDate }}</p>
+            <p v-if="currentUser.location">所在地: {{ currentUser.location }}</p>
           </div>
         </div>
       </div>
@@ -36,6 +39,32 @@
                   type="textarea" 
                   :rows="4" 
                   placeholder="请输入个人简介"
+                />
+              </el-form-item>
+              <el-form-item label="兴趣爱好">
+                <el-input 
+                  v-model="userForm.interests" 
+                  type="textarea" 
+                  :rows="2" 
+                  placeholder="请输入您的兴趣爱好，多个兴趣用逗号分隔"
+                />
+              </el-form-item>
+              <el-form-item label="专业领域">
+                <el-input 
+                  v-model="userForm.expertise" 
+                  placeholder="请输入您的专业领域或技能"
+                />
+              </el-form-item>
+              <el-form-item label="教育背景">
+                <el-input 
+                  v-model="userForm.education" 
+                  placeholder="请输入您的教育背景"
+                />
+              </el-form-item>
+              <el-form-item label="所在地区">
+                <el-input 
+                  v-model="userForm.location" 
+                  placeholder="请输入您的所在地区"
                 />
               </el-form-item>
               <el-form-item>
@@ -84,14 +113,25 @@
                 <el-input v-model="settingsForm.email" placeholder="请输入邮箱" />
               </el-form-item>
               <el-form-item label="头像">
-                <el-select v-model="settingsForm.avatar" placeholder="选择头像">
-                  <el-option 
-                    v-for="letter in 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')" 
-                    :key="letter" 
-                    :label="letter" 
-                    :value="letter" 
-                  />
-                </el-select>
+                <div class="avatar-upload-container">
+                  <div class="current-avatar" v-if="avatarPreview">
+                    <img :src="avatarPreview" class="avatar-preview" />
+                  </div>
+                  <div class="current-avatar" v-else-if="settingsForm.avatar">
+                    <el-avatar :size="100" class="avatar-preview">{{ settingsForm.avatar }}</el-avatar>
+                  </div>
+                  <el-upload
+                    class="avatar-uploader"
+                    action="#"
+                    :auto-upload="false"
+                    :show-file-list="false"
+                    :on-change="handleAvatarChange">
+                    <el-button type="primary">选择图片</el-button>
+                    <template #tip>
+                      <div class="el-upload__tip">只能上传 jpg/png 文件，且不超过 2MB</div>
+                    </template>
+                  </el-upload>
+                </div>
               </el-form-item>
               <el-form-item>
                 <el-button type="primary" @click="saveSettings">保存设置</el-button>
@@ -130,9 +170,11 @@
 <script setup>
 import { ref, reactive, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
+import { saveUserAvatar, getUserAvatar, fileToBase64 } from '../utils/imageStorage'
 
 const activeTab = ref('basic')
 const passwordFormRef = ref(null)
+const avatarPreview = ref(null)
 
 // 从localStorage获取当前用户信息
 const getCurrentUser = () => {
@@ -161,6 +203,19 @@ const getCurrentUser = () => {
 
 const currentUser = ref(getCurrentUser())
 
+// 用户头像URL
+const userAvatar = ref(null)
+
+// 加载用户头像
+const loadUserAvatar = () => {
+  if (currentUser.value && currentUser.value.avatar === 'CUSTOM') {
+    const username = currentUser.value.username || currentUser.value.role
+    userAvatar.value = getUserAvatar(username)
+  } else {
+    userAvatar.value = null
+  }
+}
+
 const stats = ref({
   mindmapCount: 5,
   materialsCount: 12,
@@ -170,7 +225,11 @@ const stats = ref({
 
 const userForm = ref({
   username: currentUser.value.username || '',
-  bio: currentUser.value.bio || ''
+  bio: currentUser.value.bio || '',
+  interests: currentUser.value.interests || '',
+  expertise: currentUser.value.expertise || '',
+  education: currentUser.value.education || '',
+  location: currentUser.value.location || ''
 })
 
 const passwordForm = ref({
@@ -215,7 +274,25 @@ const saveUserInfo = () => {
   // 获取用户列表
   const usersJson = localStorage.getItem('users')
   if (!usersJson) {
-    ElMessage.error('用户数据获取失败')
+    // 如果找不到用户列表，创建一个新的用户列表
+    const newUsers = [currentUser.value]
+    localStorage.setItem('users', JSON.stringify(newUsers))
+    
+    // 更新当前用户信息
+    currentUser.value.username = userForm.value.username
+    currentUser.value.bio = userForm.value.bio
+    currentUser.value.interests = userForm.value.interests
+    currentUser.value.expertise = userForm.value.expertise
+    currentUser.value.education = userForm.value.education
+    currentUser.value.location = userForm.value.location
+    
+    // 保存到localStorage
+    localStorage.setItem('currentUser', JSON.stringify(currentUser.value))
+    
+    ElMessage({
+      message: '个人资料已更新',
+      type: 'success'
+    })
     return
   }
   
@@ -224,17 +301,33 @@ const saveUserInfo = () => {
     const userIndex = users.findIndex(user => user.username === currentUser.value.username)
     
     if (userIndex === -1) {
-      ElMessage.error('用户不存在')
-      return
+      // 如果在用户列表中找不到当前用户，将当前用户添加到列表中
+      users.push({
+        ...currentUser.value,
+        username: userForm.value.username,
+        bio: userForm.value.bio,
+        interests: userForm.value.interests,
+        expertise: userForm.value.expertise,
+        education: userForm.value.education,
+        location: userForm.value.location
+      })
+    } else {
+      // 更新用户信息
+      users[userIndex].username = userForm.value.username
+      users[userIndex].bio = userForm.value.bio
+      users[userIndex].interests = userForm.value.interests
+      users[userIndex].expertise = userForm.value.expertise
+      users[userIndex].education = userForm.value.education
+      users[userIndex].location = userForm.value.location
     }
-    
-    // 更新用户信息
-    users[userIndex].username = userForm.value.username
-    users[userIndex].bio = userForm.value.bio
     
     // 更新当前用户信息
     currentUser.value.username = userForm.value.username
     currentUser.value.bio = userForm.value.bio
+    currentUser.value.interests = userForm.value.interests
+    currentUser.value.expertise = userForm.value.expertise
+    currentUser.value.education = userForm.value.education
+    currentUser.value.location = userForm.value.location
     
     // 保存到localStorage
     localStorage.setItem('users', JSON.stringify(users))
@@ -298,8 +391,35 @@ const changePassword = () => {
   })
 }
 
+// 处理头像上传
+const handleAvatarChange = async (file) => {
+  // 验证文件类型
+  const isJPG = file.raw.type === 'image/jpeg'
+  const isPNG = file.raw.type === 'image/png'
+  if (!isJPG && !isPNG) {
+    ElMessage.error('头像图片只能是 JPG 或 PNG 格式!')
+    return
+  }
+  
+  // 验证文件大小
+  const isLt2M = file.raw.size / 1024 / 1024 < 2
+  if (!isLt2M) {
+    ElMessage.error('头像图片大小不能超过 2MB!')
+    return
+  }
+  
+  try {
+    // 将文件转换为Base64格式
+    const base64Data = await fileToBase64(file.raw)
+    avatarPreview.value = base64Data
+  } catch (error) {
+    console.error('头像预览失败:', error)
+    ElMessage.error('头像预览失败，请重试')
+  }
+}
+
 // 保存账户设置
-const saveSettings = () => {
+const saveSettings = async () => {
   // 获取用户列表
   const usersJson = localStorage.getItem('users')
   if (!usersJson) {
@@ -314,6 +434,21 @@ const saveSettings = () => {
     if (userIndex === -1) {
       ElMessage.error('用户不存在')
       return
+    }
+    
+    // 如果有新上传的头像，保存头像图片
+    if (avatarPreview.value) {
+      // 保存头像到图片存储
+      const username = currentUser.value.username || currentUser.value.role
+      const success = await saveUserAvatar(username, avatarPreview.value)
+      
+      if (success) {
+        // 更新用户头像信息为特殊标记，表示使用自定义头像
+        settingsForm.value.avatar = 'CUSTOM'
+      } else {
+        ElMessage.error('头像保存失败，请重试')
+        return
+      }
     }
     
     // 更新用户信息
@@ -332,6 +467,9 @@ const saveSettings = () => {
       message: '账户设置已更新',
       type: 'success'
     })
+    
+    // 清除预览
+    avatarPreview.value = null
   } catch (e) {
     console.error('保存账户设置失败', e)
     ElMessage.error('保存失败，请重试')
@@ -344,8 +482,15 @@ onMounted(() => {
   currentUser.value = user
   userForm.value.username = user.username || ''
   userForm.value.bio = user.bio || ''
+  userForm.value.interests = user.interests || ''
+  userForm.value.expertise = user.expertise || ''
+  userForm.value.education = user.education || ''
+  userForm.value.location = user.location || ''
   settingsForm.value.email = user.email || ''
   settingsForm.value.avatar = user.avatar || ''
+  
+  // 加载用户头像
+  loadUserAvatar()
 })
 </script>
 
@@ -400,6 +545,25 @@ onMounted(() => {
           font-size: 40px;
         }
       }
+      
+      .avatar-upload-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+        
+        .current-avatar {
+          margin-bottom: 10px;
+          
+          .avatar-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #eaeaea;
+          }
+        }
+      }
 
       .user-details {
         h2 {
@@ -427,6 +591,31 @@ onMounted(() => {
       h2 {
         margin: 0 0 20px 0;
         font-size: 18px;
+      }
+      
+      .avatar-upload-container {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+        
+        .current-avatar {
+          margin-bottom: 10px;
+          
+          .avatar-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #eaeaea;
+          }
+        }
+        
+        .el-upload__tip {
+          font-size: 12px;
+          color: #909399;
+          margin-top: 5px;
+        }
       }
     }
   }

@@ -37,6 +37,17 @@
       </nav>
     </div>
     <div class="main-content" :class="{ 'full-width': isLoginPage }">
+      <!-- 顶部导航栏，只在非登录页面显示 -->
+      <div class="top-navbar" v-if="!isLoginPage">
+        <div class="page-title">
+          <h2>{{ getPageTitle }}</h2>
+        </div>
+        <div class="user-info">
+          <span>{{ currentUser.username || currentUser.role }}</span>
+          <el-avatar v-if="userAvatar" :size="40" class="avatar" :src="userAvatar"></el-avatar>
+          <el-avatar v-else :size="40" class="avatar">{{ currentUser.avatar }}</el-avatar>
+        </div>
+      </div>
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
           <component :is="Component" />
@@ -47,11 +58,42 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { HomeFilled, Document, ChatDotRound, User, Setting, Share, Connection } from '@element-plus/icons-vue'
+import { getUserAvatar } from './utils/imageStorage'
 
 const route = useRoute()
+
+// 获取当前用户信息
+const currentUser = ref({
+  role: '游客',
+  avatar: 'G',
+  username: '游客'
+})
+
+// 从localStorage获取当前用户信息
+const getCurrentUser = () => {
+  const userJson = localStorage.getItem('currentUser')
+  if (userJson) {
+    try {
+      return JSON.parse(userJson)
+    } catch (e) {
+      console.error('解析用户数据失败', e)
+      return {
+        role: '游客',
+        avatar: 'G',
+        username: '游客'
+      }
+    }
+  } else {
+    return {
+      role: '游客',
+      avatar: 'G',
+      username: '游客'
+    }
+  }
+}
 
 // 判断当前是否为登录页面
 const isLoginPage = computed(() => {
@@ -60,18 +102,53 @@ const isLoginPage = computed(() => {
 
 // 判断当前用户是否为管理员
 const isAdmin = computed(() => {
-  // 从localStorage获取当前用户信息
-  const currentUserStr = localStorage.getItem('currentUser')
-  if (currentUserStr) {
-    try {
-      const currentUser = JSON.parse(currentUserStr)
-      return currentUser.role === '管理员'
-    } catch (e) {
-      console.error('解析用户数据失败', e)
-      return false
+  return currentUser.value.role === '管理员'
+})
+
+// 获取页面标题
+const getPageTitle = computed(() => {
+  const pathMap = {
+    '/dashboard': '仪表板',
+    '/mindmap': '思维导图',
+    '/materials': '资料管理',
+    '/forum': '讨论交流',
+    '/profile': '个人中心',
+    '/admin/materials': '资料管理（管理员）'
+  }
+  return pathMap[route.path] || '思维导图系统'
+})
+
+// 用户头像URL
+const userAvatar = ref(null)
+
+// 获取用户头像
+const loadUserAvatar = () => {
+  if (currentUser.value && (currentUser.value.username || currentUser.value.role)) {
+    // 如果用户头像标记为自定义头像，则从图片存储中获取
+    if (currentUser.value.avatar === 'CUSTOM') {
+      const username = currentUser.value.username || currentUser.value.role
+      userAvatar.value = getUserAvatar(username)
+    } else {
+      userAvatar.value = null
     }
   }
-  return false
+}
+
+// 页面加载时获取用户信息和头像
+onMounted(() => {
+  currentUser.value = getCurrentUser()
+  loadUserAvatar()
+})
+
+// 监听路由变化，重新加载用户信息
+const watchRoute = () => {
+  currentUser.value = getCurrentUser()
+  loadUserAvatar()
+}
+
+// 监听路由变化
+watch(() => route.path, () => {
+  watchRoute()
 })
 </script>
 
@@ -194,39 +271,63 @@ const isAdmin = computed(() => {
     &.full-width {
       width: 100%;
     }
+    
+    .top-navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px 30px;
+      background-color: white;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+      
+      .page-title {
+        h2 {
+          margin: 0;
+          font-size: 20px;
+          font-weight: 500;
+          color: #333;
+        }
+      }
+      
+      .user-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        
+        span {
+          font-size: 14px;
+          color: #606266;
+        }
+        
+        .avatar {
+          background-color: #409EFF;
+          cursor: pointer;
+        }
+      }
+    }
   }
 }
 
 // 添加过渡动画
 .fade-enter-active,
 .fade-leave-active {
-  transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  transition: opacity 0.3s ease;
 }
 
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
-  transform: translateY(10px);
 }
 
 @keyframes pulse {
-  0% {
+  from {
     opacity: 0.8;
     transform: scale(1);
   }
-  100% {
+  to {
     opacity: 1;
-    transform: scale(1.05);
+    transform: scale(1.1);
   }
-}
-
-// 全局样式优化
-body {
-  margin: 0;
-  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  color: #2c3e50;
 }
 </style>
 
