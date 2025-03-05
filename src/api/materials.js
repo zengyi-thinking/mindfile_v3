@@ -87,6 +87,16 @@ export const uploadMaterial = async (materialData, file) => {
     // 处理文件上传
     const fileSize = file ? formatFileSize(file.size) : '0MB'
     
+    // 确保标签数据是简单的字符串数组，可以被序列化
+    let hierarchicalTags = [];
+    if (materialData.hierarchicalTags && Array.isArray(materialData.hierarchicalTags)) {
+      // 将层级标签转换为字符串数组
+      hierarchicalTags = materialData.hierarchicalTags.map(tag => {
+        if (typeof tag === 'string') return tag;
+        return JSON.stringify(tag);
+      });
+    }
+    
     const newMaterial = {
       id: nextId,
       name: materialData.name || file.name,
@@ -96,8 +106,8 @@ export const uploadMaterial = async (materialData, file) => {
       size: fileSize,
       downloads: 0,
       uploader: materialData.uploader || '当前用户',
-      hierarchicalTags: materialData.hierarchicalTags || [], // 添加分级标签
-      customTags: materialData.customTags || [] // 添加自定义标签
+      hierarchicalTags: hierarchicalTags, // 确保是可序列化的数组
+      customTags: Array.isArray(materialData.customTags) ? [...materialData.customTags] : [] // 确保是可序列化的数组
     }
     
     // 保存资料信息到IndexedDB
@@ -247,7 +257,7 @@ const integrateWithMindMap = (material) => {
 }
 
 // 格式化文件大小
-const formatFileSize = (bytes) => {
+export const formatFileSize = (bytes) => {
   if (bytes === 0) return '0 Bytes'
   const k = 1024
   const sizes = ['Bytes', 'KB', 'MB', 'GB']

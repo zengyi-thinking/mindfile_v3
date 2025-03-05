@@ -239,7 +239,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { Document, Picture, VideoCamera, Files, Calendar, Download, Share, Delete, ChatDotRound, UploadFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
-import { getAllMaterials, uploadMaterial, downloadMaterial, shareMaterial, deleteMaterial, searchMaterials } from '../api/materials'
+import { getAllMaterials, uploadMaterial, downloadMaterial, shareMaterial, deleteMaterial, searchMaterials, formatFileSize } from '../api/materials'
 import { addMaterialToSearchIndex, getAllMindmaps } from '../api/mindmap'
 
 const router = useRouter()
@@ -383,12 +383,18 @@ const submitUpload = async () => {
   loading.value = true
   try {
     // 调用API上传文件
+    // 确保hierarchicalTags是可序列化的数据
+    const hierarchicalTags = uploadForm.value.hierarchicalTags.map(tag => {
+      if (typeof tag === 'string') return tag;
+      return JSON.stringify(tag);
+    });
+    
     const materialData = {
       name: uploadForm.value.name,
       description: uploadForm.value.description,
       type: uploadForm.value.type,
       uploader: currentUser.value.role,
-      hierarchicalTags: uploadForm.value.hierarchicalTags,
+      hierarchicalTags: hierarchicalTags,
       customTags: uploadForm.value.customTags
     }
     
