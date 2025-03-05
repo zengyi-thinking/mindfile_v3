@@ -9,7 +9,7 @@
     </div>
 
     <div class="dashboard-content">
-      <div class="dashboard-card mindmap-card">
+      <div class="dashboard-card mindmap-card" @click="navigateTo('/mindmap')">
         <div class="card-header">
           <div class="card-icon">
             <el-icon><TrendCharts /></el-icon>
@@ -22,7 +22,7 @@
         </div>
       </div>
 
-      <div class="dashboard-card materials-card">
+      <div class="dashboard-card materials-card" @click="navigateTo('/materials')">
         <div class="card-header">
           <div class="card-icon">
             <el-icon><Document /></el-icon>
@@ -35,7 +35,7 @@
         </div>
       </div>
 
-      <div class="dashboard-card forum-card">
+      <div class="dashboard-card forum-card" @click="navigateTo('/forum')">
         <div class="card-header">
           <div class="card-icon">
             <el-icon><ChatDotRound /></el-icon>
@@ -51,23 +51,65 @@
 
     <div class="recent-activities">
       <h2>最近活动</h2>
-      <el-button class="view-details" type="primary">查看详情</el-button>
-      <div class="activity-chart">
-        <div class="placeholder">[最近一周的活动图表将显示在这里]</div>
+      <el-button class="view-details" type="primary" @click="viewAllActivities">查看详情</el-button>
+      <div class="activity-list" v-if="userActivities.length > 0">
+        <div v-for="(activity, index) in userActivities" :key="index" class="activity-item">
+          <div class="activity-icon">
+            <el-icon v-if="activity.type === ACTIVITY_TYPES.DOWNLOAD"><Download /></el-icon>
+            <el-icon v-else-if="activity.type === ACTIVITY_TYPES.LIKE"><Star /></el-icon>
+            <el-icon v-else-if="activity.type === ACTIVITY_TYPES.COMMENT"><ChatDotRound /></el-icon>
+            <el-icon v-else-if="activity.type === ACTIVITY_TYPES.POST"><Document /></el-icon>
+            <el-icon v-else-if="activity.type === ACTIVITY_TYPES.REPLY"><ChatLineRound /></el-icon>
+            <el-icon v-else-if="activity.type === ACTIVITY_TYPES.CREATE_MINDMAP"><TrendCharts /></el-icon>
+            <el-icon v-else-if="activity.type === ACTIVITY_TYPES.UPDATE_MINDMAP"><Edit /></el-icon>
+            <el-icon v-else><InfoFilled /></el-icon>
+          </div>
+          <div class="activity-content">
+            <p>{{ formatActivityDescription(activity) }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="empty-activities" v-else>
+        <el-empty description="暂无活动记录" :image-size="100">
+          <p>开始使用系统功能，这里将显示您的活动记录</p>
+        </el-empty>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import { Document, ChatDotRound, TrendCharts } from '@element-plus/icons-vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { Document, ChatDotRound, TrendCharts, Download, Star, ChatLineRound, Edit, InfoFilled } from '@element-plus/icons-vue'
+import { ACTIVITY_TYPES, getUserActivities, formatActivityDescription } from '../utils/activityTracker'
 
-// 模拟数据
-const currentUser = ref({
-  username: 'zengyi_thinking',
-  avatar: 'Z'
-})
+const router = useRouter()
+
+// 从localStorage获取当前用户信息
+const getCurrentUser = () => {
+  const userJson = localStorage.getItem('currentUser')
+  if (userJson) {
+    try {
+      return JSON.parse(userJson)
+    } catch (e) {
+      console.error('解析用户数据失败', e)
+      return {
+        username: '游客',
+        avatar: 'G',
+        role: '游客'
+      }
+    }
+  } else {
+    return {
+      username: '游客',
+      avatar: 'G',
+      role: '游客'
+    }
+  }
+}
+
+const currentUser = ref(getCurrentUser())
 
 const stats = ref({
   mindmapCount: 5,
@@ -76,6 +118,32 @@ const stats = ref({
   viewCount: 230,
   postCount: 8,
   replyCount: 27
+})
+
+// 用户活动列表
+const userActivities = ref([])
+
+// 导航到指定页面
+const navigateTo = (path) => {
+  router.push(path)
+}
+
+// 查看所有活动
+const viewAllActivities = () => {
+  // 这里可以跳转到活动详情页或显示更多活动
+  // 暂时只是获取更多活动记录
+  loadUserActivities(50)
+}
+
+// 加载用户活动
+const loadUserActivities = (limit = 10) => {
+  const username = currentUser.value.username
+  userActivities.value = getUserActivities(username, limit)
+}
+
+// 页面加载时获取用户活动
+onMounted(() => {
+  loadUserActivities()
 })
 </script>
 
