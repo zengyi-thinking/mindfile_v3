@@ -463,6 +463,9 @@ const saveSettings = async () => {
     localStorage.setItem('users', JSON.stringify(users))
     localStorage.setItem('currentUser', JSON.stringify(currentUser.value))
     
+    // 立即更新头像显示
+    loadUserAvatar()
+    
     ElMessage({
       message: '账户设置已更新',
       type: 'success'
