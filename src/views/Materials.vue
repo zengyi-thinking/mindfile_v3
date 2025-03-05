@@ -375,6 +375,10 @@ const submitUpload = async () => {
   }
   
   const file = uploadFiles.value[0].raw
+  if (!file) {
+    ElMessage.error('文件数据无效，请重新选择文件')
+    return
+  }
   
   loading.value = true
   try {
@@ -388,7 +392,12 @@ const submitUpload = async () => {
       customTags: uploadForm.value.customTags
     }
     
+    console.log('开始上传文件:', file.name, '类型:', file.type, '大小:', formatFileSize(file.size))
     const newMaterial = await uploadMaterial(materialData, file)
+    
+    if (!newMaterial) {
+      throw new Error('上传资料失败：服务器未返回资料信息')
+    }
     
     // 将资料添加到思维导图搜索引擎
     const result = await addMaterialToSearchIndex(newMaterial)
@@ -412,7 +421,13 @@ const submitUpload = async () => {
     loadMaterials()
   } catch (error) {
     console.error('上传失败:', error)
-    ElMessage.error('资料上传失败')
+    let errorMsg = '资料上传失败'
+    if (error.message) {
+      errorMsg += ': ' + error.message
+    }
+    ElMessage.error(errorMsg)
+    // 重置上传状态
+    uploadFiles.value = []
   } finally {
     loading.value = false
   }
@@ -506,14 +521,43 @@ const handleFileChange = (file, fileList) => {
 // 自定义上传处理函数
 const customUpload = async (options) => {
   try {
-    const { file } = options
+    const { file, onSuccess, onError } = options
+    // 检查文件大小
+    if (file.size > 50 * 1024 * 1024) { // 50MB
+      ElMessage.error('文件大小超过50MB限制')
+      onError('文件大小超过限制')
+      return
+    }
+    
+    // 检查文件类型
+    const validTypes = {
+      'document': ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
+      'image': ['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml'],
+      'video': ['video/mp4', 'video/webm', 'video/ogg'],
+      'other': []
+    }
+    
+    // 如果已选择了文件类型，检查文件MIME类型是否匹配
+    if (uploadForm.value.type !== 'other' && 
+        validTypes[uploadForm.value.type] && 
+        validTypes[uploadForm.value.type].length > 0 && 
+        !validTypes[uploadForm.value.type].includes(file.type)) {
+      ElMessage.warning(`文件类型与所选资料类型不匹配，请选择正确的资料类型或更换文件`)
+    }
+    
     // 这里不需要实际上传，因为submitUpload函数会处理上传逻辑
     // 只需要确保文件被正确添加到uploadFiles中
-    console.log('文件准备上传:', file.name)
+    console.log('文件准备上传:', file.name, '类型:', file.type, '大小:', formatFileSize(file.size))
+    
+    // 调用成功回调，确保el-upload组件知道文件已被处理
+    onSuccess(file)
     return file
   } catch (error) {
     console.error('文件处理失败:', error)
-    ElMessage.error('文件处理失败')
+    ElMessage.error('文件处理失败: ' + (error.message || '未知错误'))
+    if (options.onError) {
+      options.onError(error)
+    }
   }
 }
 
@@ -830,5 +874,9 @@ onMounted(() => {
     .related-mindmap-item {
       padding: 5px 0;
       border-bottom: 1px dashed #eee;
+      
+ ```
+      
+ ```
       
  
