@@ -20,7 +20,7 @@
     </div>
 
     <div class="topic-list">
-      <div v-for="(topic, index) in topics" :key="index" class="topic-item">
+      <div v-for="(topic, index) in topics" :key="index" class="topic-item" @click="viewTopicDetail(topic.id)">
         <div class="topic-content">
           <h3 class="topic-title">{{ topic.title }}</h3>
           <div class="topic-meta">
@@ -97,21 +97,45 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import { ACTIVITY_TYPES, recordActivity } from '../utils/activityTracker'
+
+const router = useRouter()
 
 const searchQuery = ref('')
 const topicDialogVisible = ref(false)
 
-const currentUser = ref({
-  role: '管理员',
-  avatar: 'A'
-})
+// 获取当前用户信息
+const getCurrentUser = () => {
+  const userJson = localStorage.getItem('currentUser')
+  if (userJson) {
+    try {
+      return JSON.parse(userJson)
+    } catch (e) {
+      console.error('解析用户数据失败', e)
+      return {
+        role: '游客',
+        avatar: 'G',
+        username: '游客'
+      }
+    }
+  } else {
+    return {
+      role: '游客',
+      avatar: 'G',
+      username: '游客'
+    }
+  }
+}
 
-// 模拟讨论主题数据
+const currentUser = ref(getCurrentUser())
+
+// 讨论主题数据
 const topics = ref([
   {
-    id: 1,
+    id: '1',
     title: '思维导图在学习Python编程中的应用',
     author: '管理员',
     publishDate: '2023-06-10',
@@ -122,7 +146,7 @@ const topics = ref([
     lastReplyTime: '2023-06-12 14:30'
   },
   {
-    id: 2,
+    id: '2',
     title: '关于如何构建高效的思维导图的讨论',
     author: '张三',
     publishDate: '2023-06-08',
@@ -133,7 +157,7 @@ const topics = ref([
     lastReplyTime: '2023-06-11 09:15'
   },
   {
-    id: 3,
+    id: '3',
     title: '使用思维导图整理数据结构与算法',
     author: '李四',
     publishDate: '2023-06-05',
@@ -144,7 +168,7 @@ const topics = ref([
     lastReplyTime: '2023-06-13 16:45'
   },
   {
-    id: 4,
+    id: '4',
     title: '思维导图在项目管理中的应用经验分享',
     author: '赵六',
     publishDate: '2023-06-02',
@@ -155,7 +179,7 @@ const topics = ref([
     lastReplyTime: '2023-06-10 11:20'
   },
   {
-    id: 5,
+    id: '5',
     title: '推荐几款好用的思维导图软件',
     author: '王五',
     publishDate: '2023-05-30',
@@ -174,6 +198,22 @@ const topicForm = ref({
   content: '',
   tags: []
 })
+
+// 从localStorage加载讨论列表
+const loadTopicsFromStorage = () => {
+  const topicsJson = localStorage.getItem('topics')
+  if (topicsJson) {
+    try {
+      const storedTopics = JSON.parse(topicsJson)
+      if (Array.isArray(storedTopics) && storedTopics.length > 0) {
+        topics.value = storedTopics
+      }
+    } catch (e) {
+      console.error('解析话题数据失败', e)
+      ElMessage.error('加载讨论列表失败')
+    }
+  }
+}
 
 // 搜索讨论
 const searchTopics = () => {
@@ -194,32 +234,70 @@ const createNewTopic = () => {
 
 // 提交讨论
 const submitTopic = () => {
+  if (!topicForm.value.title.trim() || !topicForm.value.category || !topicForm.value.content.trim()) {
+    ElMessage.warning('请填写完整的讨论信息')
+    return
+  }
+  
   // 实际应用中这里会调用API提交讨论
   console.log('提交讨论:', topicForm.value)
   topicDialogVisible.value = false
   
   // 模拟添加新讨论
   const newTopic = {
-    id: topics.value.length + 1,
+    id: Date.now().toString(), // 使用时间戳作为ID，确保唯一性
     title: topicForm.value.title,
-    author: currentUser.value.role,
+    author: currentUser.value.username || currentUser.value.role,
     publishDate: new Date().toISOString().split('T')[0],
     category: topicForm.value.category,
+    content: topicForm.value.content,
+    tags: topicForm.value.tags || [],
     views: 0,
     replies: 0,
-    lastReplier: currentUser.value.role,
+    lastReplier: currentUser.value.username || currentUser.value.role,
     lastReplyTime: new Date().toLocaleString()
   }
   
   topics.value.unshift(newTopic)
   
+  // 保存到localStorage
+  const topicsJson = localStorage.getItem('topics')
+  let allTopics = []
+  
+  if (topicsJson) {
+    try {
+      allTopics = JSON.parse(topicsJson)
+      // 添加新话题到列表开头
+      allTopics.unshift(newTopic)
+    } catch (e) {
+      console.error('解析话题数据失败', e)
+      allTopics = [newTopic]
+    }
+  } else {
+    allTopics = [newTopic]
+  }
+  
+  localStorage.setItem('topics', JSON.stringify(allTopics))
+  
   // 记录发表帖子活动
-  const username = currentUser.value.username || currentUser.value.role
-  recordActivity(username, ACTIVITY_TYPES.POST, {
-    topicTitle: topicForm.value.title,
-    topicId: newTopic.id
+  recordActivity({
+    type: ACTIVITY_TYPES.POST,
+    topicId: newTopic.id,
+    topicTitle: newTopic.title
   })
+  
+  ElMessage.success('发布讨论成功')
 }
+
+// 查看话题详情
+const viewTopicDetail = (topicId) => {
+  router.push(`/forum/detail/${topicId}`)
+}
+
+// 组件挂载时加载讨论列表
+onMounted(() => {
+  loadTopicsFromStorage()
+})
 </script>
 
 <style lang="scss" scoped>

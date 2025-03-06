@@ -45,6 +45,12 @@ const routes = [
     meta: { title: '讨论交流' }
   },
   {
+    path: '/forum/detail/:id',
+    name: 'ForumDetail',
+    component: () => import('../views/ForumDetail.vue'),
+    meta: { title: '讨论详情' }
+  },
+  {
     path: '/profile',
     name: 'Profile',
     component: () => import('../views/Profile.vue'),
