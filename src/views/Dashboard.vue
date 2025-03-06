@@ -323,26 +323,65 @@ onMounted(() => {
       }
     }
 
-    .activity-chart {
-      height: 300px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: linear-gradient(135deg, #f5f7fa, #ffffff);
+    .activity-list {
+      margin-top: 20px;
+      max-height: 400px;
+      overflow-y: auto;
       border-radius: 8px;
+      background: linear-gradient(135deg, #f5f7fa, #ffffff);
       box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.03);
-      transition: all 0.3s ease;
-      margin-top: 10px;
+      padding: 15px;
       
-      &:hover {
-        box-shadow: inset 0 2px 15px rgba(0, 0, 0, 0.05);
+      .activity-item {
+        display: flex;
+        align-items: flex-start;
+        padding: 12px 15px;
+        border-bottom: 1px solid #f0f0f0;
+        transition: all 0.3s ease;
+        
+        &:hover {
+          background-color: rgba(64, 158, 255, 0.05);
+        }
+        
+        &:last-child {
+          border-bottom: none;
+        }
+        
+        .activity-icon {
+          margin-right: 15px;
+          width: 36px;
+          height: 36px;
+          border-radius: 50%;
+          background-color: #f5f7fa;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          color: #409EFF;
+          flex-shrink: 0;
+        }
+        
+        .activity-content {
+          flex: 1;
+          
+          p {
+            margin: 0;
+            font-size: 14px;
+            color: #606266;
+            line-height: 1.5;
+          }
+        }
       }
-
-      .placeholder {
+    }
+    
+    .empty-activities {
+      margin-top: 20px;
+      padding: 30px;
+      text-align: center;
+      
+      p {
         color: #909399;
-        font-size: 15px;
-        font-style: italic;
-        opacity: 0.8;
+        margin-top: 10px;
+        font-size: 14px;
       }
     }
   }

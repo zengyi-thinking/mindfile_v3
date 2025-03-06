@@ -98,6 +98,7 @@
 
 <script setup>
 import { ref } from 'vue'
+import { ACTIVITY_TYPES, recordActivity } from '../utils/activityTracker'
 
 const searchQuery = ref('')
 const topicDialogVisible = ref(false)
@@ -198,7 +199,7 @@ const submitTopic = () => {
   topicDialogVisible.value = false
   
   // 模拟添加新讨论
-  topics.value.unshift({
+  const newTopic = {
     id: topics.value.length + 1,
     title: topicForm.value.title,
     author: currentUser.value.role,
@@ -208,6 +209,15 @@ const submitTopic = () => {
     replies: 0,
     lastReplier: currentUser.value.role,
     lastReplyTime: new Date().toLocaleString()
+  }
+  
+  topics.value.unshift(newTopic)
+  
+  // 记录发表帖子活动
+  const username = currentUser.value.username || currentUser.value.role
+  recordActivity(username, ACTIVITY_TYPES.POST, {
+    topicTitle: topicForm.value.title,
+    topicId: newTopic.id
   })
 }
 </script>

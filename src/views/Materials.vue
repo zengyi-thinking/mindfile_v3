@@ -241,6 +241,7 @@ import { Document, Picture, VideoCamera, Files, Calendar, Download, Share, Delet
 import { ElMessage } from 'element-plus'
 import { getAllMaterials, uploadMaterial, downloadMaterial, shareMaterial, deleteMaterial, searchMaterials, formatFileSize } from '../api/materials'
 import { addMaterialToSearchIndex, getAllMindmaps } from '../api/mindmap'
+import { ACTIVITY_TYPES, recordActivity } from '../utils/activityTracker'
 
 const router = useRouter()
 const searchQuery = ref('')
@@ -444,6 +445,14 @@ const handleDownload = async (material) => {
   try {
     await downloadMaterial(material.id)
     ElMessage.success('下载开始')
+    
+    // 记录下载活动
+    const username = currentUser.value.username || currentUser.value.role
+    recordActivity(username, ACTIVITY_TYPES.DOWNLOAD, {
+      materialName: material.name,
+      materialId: material.id
+    })
+    
     // 刷新资料列表以更新下载次数
     loadMaterials()
   } catch (error) {
