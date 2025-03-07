@@ -15,6 +15,9 @@ export default defineConfig({
     }
   },
   server: {
-    port: 8000
+    port: 8000,
+    hmr: {
+      overlay: false // 禁用错误覆盖层
+    }
   }
 })

@@ -249,6 +249,78 @@ export const searchMaterials = async (query, type = 'all') => {
   }
 }
 
+// 获取资料详情
+export const getMaterialDetail = async (materialId) => {
+  try {
+    const allMaterials = await getAllMaterialsFromDB()
+    const material = allMaterials.find(m => m.id === materialId)
+    
+    if (!material) {
+      throw new Error('资料不存在')
+    }
+    
+    return {
+      data: {
+        title: material.name,
+        author: material.uploader,
+        content: material.description,
+        createdAt: material.uploadDate
+      }
+    }
+  } catch (error) {
+    console.error('获取资料详情失败:', error)
+    throw error
+  }
+}
+
+// 获取资料评论
+export const getMaterialComments = async (materialId) => {
+  try {
+    // 模拟从服务器获取评论数据
+    const comments = [
+      {
+        id: 1,
+        user: { name: '用户1' },
+        content: '这个资料很有帮助',
+        createdAt: '2023-06-20'
+      },
+      {
+        id: 2,
+        user: { name: '用户2' },
+        content: '内容很全面，感谢分享',
+        createdAt: '2023-06-21'
+      }
+    ]
+    
+    return {
+      data: comments
+    }
+  } catch (error) {
+    console.error('获取评论失败:', error)
+    throw error
+  }
+}
+
+// 添加评论
+export const addComment = async (materialId, commentData) => {
+  try {
+    // 模拟添加评论
+    const newComment = {
+      id: Date.now(),
+      user: { name: '当前用户' },
+      content: commentData.content,
+      createdAt: new Date().toISOString()
+    }
+    
+    return {
+      data: newComment
+    }
+  } catch (error) {
+    console.error('添加评论失败:', error)
+    throw error
+  }
+}
+
 // 与思维导图搜索引擎集成
 const integrateWithMindMap = (material) => {
   console.log('将资料集成到思维导图搜索引擎:', material.name)

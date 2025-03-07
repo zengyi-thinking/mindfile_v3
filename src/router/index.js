@@ -30,6 +30,12 @@ const routes = [
     meta: { title: '资料管理' }
   },
   {
+    path: '/materials/:id',
+    name: 'MaterialDetail',
+    component: () => import('../views/MaterialDetail.vue'),
+    meta: { title: '资料详情' }
+  },
+  {
     path: '/admin/materials',
     name: 'AdminMaterials',
     component: () => import('../views/AdminMaterials.vue'),
