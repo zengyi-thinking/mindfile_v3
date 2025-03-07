@@ -2,6 +2,27 @@
 import axios from 'axios'
 import { saveMaterial, saveFile, getAllMaterialsFromDB, getFileByMaterialId, deleteMaterialAndFile, searchMaterialsInDB, initializeDatabase } from './storage'
 
+// 获取资料详情
+export const getMaterialById = async (id) => {
+  // 模拟从后端获取数据
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      // 模拟资料数据
+      const material = {
+        id: id,
+        name: `资料${id}`,
+        description: `这是资料${id}的详细描述，包含了相关的内容和信息。`,
+        type: ['document', 'image', 'video', 'other'][Math.floor(Math.random() * 4)],
+        uploadedAt: '2023-06-15',
+        downloadCount: Math.floor(Math.random() * 100),
+        hierarchicalTags: ['比赛', '数学建模', '比赛规则']
+      };
+      
+      resolve(material);
+    }, 300);
+  });
+};
+
 // 模拟本地存储 (仅用于初始化示例数据)
 const localMaterialsStorage = {
   materials: [],

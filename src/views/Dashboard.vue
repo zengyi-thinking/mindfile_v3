@@ -22,6 +22,19 @@
         </div>
       </div>
 
+      <div class="dashboard-card tag-mindmap-card" @click="navigateTo('/tag-mindmap')">
+        <div class="card-header">
+          <div class="card-icon">
+            <el-icon><Connection /></el-icon>
+          </div>
+          <h2>标签思维导图</h2>
+        </div>
+        <div class="card-content">
+          <p>通过标签查找资料</p>
+          <p>可视化展示知识结构</p>
+        </div>
+      </div>
+
       <div class="dashboard-card materials-card" @click="navigateTo('/materials')">
         <div class="card-header">
           <div class="card-icon">

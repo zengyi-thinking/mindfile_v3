@@ -135,13 +135,43 @@ const generateInitialNodeStructure = (tagPath, materials) => {
         children: []
       };
       
-      // 添加资料节点
+      // 为每个资料创建自定义标签节点
       materials.forEach(material => {
-        tertiaryNode.children.push({
-          id: `material-${material.id}`,
-          text: material.name,
-          data: { materialId: material.id, type: 'material' }
-        });
+        // 检查资料是否有自定义标签
+        if (material.customTags && material.customTags.length > 0) {
+          // 为每个自定义标签创建节点
+          material.customTags.forEach(customTag => {
+            // 检查是否已存在该自定义标签节点
+            let customTagNode = tertiaryNode.children.find(node => 
+              node.data && node.data.type === 'customTag' && node.text === customTag
+            );
+            
+            // 如果不存在，创建新的自定义标签节点
+            if (!customTagNode) {
+              customTagNode = {
+                id: `customTag-${customTag.replace(/\s+/g, '-')}`,
+                text: customTag,
+                data: { type: 'customTag', value: customTag },
+                children: []
+              };
+              tertiaryNode.children.push(customTagNode);
+            }
+            
+            // 将资料添加到自定义标签节点下
+            customTagNode.children.push({
+              id: `material-${material.id}`,
+              text: material.name,
+              data: { materialId: material.id, type: 'material' }
+            });
+          });
+        } else {
+          // 如果没有自定义标签，直接添加到三级标签节点下
+          tertiaryNode.children.push({
+            id: `material-${material.id}`,
+            text: material.name,
+            data: { materialId: material.id, type: 'material' }
+          });
+        }
       });
       
       secondaryNode.children.push(tertiaryNode);
@@ -197,15 +227,47 @@ const updateNodeStructure = (existingNodes, newMaterials) => {
     }
   }
   
-  // 添加新资料，避免重复
-  const existingMaterialIds = new Set(
-    targetNode.children
-      .filter(node => node.data && node.data.type === 'material')
-      .map(node => node.data.materialId)
-  );
-  
+  // 添加新资料，按自定义标签分组
   newMaterials.forEach(material => {
-    if (!existingMaterialIds.has(material.id)) {
+    // 检查资料是否已存在
+    const existingMaterialNode = targetNode.children.find(node => 
+      node.data && 
+      node.data.type === 'material' && 
+      node.data.materialId === material.id
+    );
+    
+    // 如果资料已存在，跳过
+    if (existingMaterialNode) return;
+    
+    // 检查资料是否有自定义标签
+    if (material.customTags && material.customTags.length > 0) {
+      // 为每个自定义标签创建或更新节点
+      material.customTags.forEach(customTag => {
+        // 检查是否已存在该自定义标签节点
+        let customTagNode = targetNode.children.find(node => 
+          node.data && node.data.type === 'customTag' && node.text === customTag
+        );
+        
+        // 如果不存在，创建新的自定义标签节点
+        if (!customTagNode) {
+          customTagNode = {
+            id: `customTag-${customTag.replace(/\s+/g, '-')}`,
+            text: customTag,
+            data: { type: 'customTag', value: customTag },
+            children: []
+          };
+          targetNode.children.push(customTagNode);
+        }
+        
+        // 将资料添加到自定义标签节点下
+        customTagNode.children.push({
+          id: `material-${material.id}`,
+          text: material.name,
+          data: { materialId: material.id, type: 'material' }
+        });
+      });
+    } else {
+      // 如果没有自定义标签，直接添加到目标节点下
       targetNode.children.push({
         id: `material-${material.id}`,
         text: material.name,
@@ -254,23 +316,52 @@ export const organizeMaterialsByTags = async (materials) => {
 // 根据标签路径获取相关资料
 export const getMaterialsByTagPath = async (tagPath) => {
   // 实际应用中，这里会调用后端API获取相关资料
-  // 这里简单模拟一下
+  // 这里根据不同标签路径返回不同的模拟数据
   return new Promise((resolve) => {
     setTimeout(() => {
-      resolve([
-        {
-          id: 1,
-          name: '示例资料1',
-          description: '这是一个示例资料',
-          type: 'document'
-        },
-        {
-          id: 2,
-          name: '示例资料2',
-          description: '这是另一个示例资料',
-          type: 'document'
+      // 根据标签路径生成不同的示例资料
+      const [primary, secondary, tertiary] = tagPath;
+      const materials = [];
+      
+      // 为每个标签路径生成2-5个资料
+      const count = Math.floor(Math.random() * 4) + 2;
+      
+      // 常用自定义标签列表，用于随机分配
+      const commonCustomTags = [
+        '重要', '紧急', '参考', '草稿', '完成', '进行中',
+        '高质量', '入门级', '进阶', '专家级',
+        'Python', 'Java', 'JavaScript', 'C++', 'Go'
+      ];
+      
+      for (let i = 1; i <= count; i++) {
+        // 随机决定是否添加自定义标签
+        const hasCustomTags = Math.random() > 0.3; // 70%的资料有自定义标签
+        
+        // 随机选择1-3个自定义标签
+        const customTags = [];
+        if (hasCustomTags) {
+          const tagCount = Math.floor(Math.random() * 3) + 1;
+          for (let j = 0; j < tagCount; j++) {
+            const randomTag = commonCustomTags[Math.floor(Math.random() * commonCustomTags.length)];
+            if (!customTags.includes(randomTag)) {
+              customTags.push(randomTag);
+            }
+          }
         }
-      ]);
+        
+        materials.push({
+          id: Math.floor(Math.random() * 1000) + 1,
+          name: `${primary}-${secondary || ''}${tertiary ? '-' + tertiary : ''} 资料${i}`,
+          description: `这是关于${primary}${secondary ? '/' + secondary : ''}${tertiary ? '/' + tertiary : ''} 的资料示例`,
+          type: ['document', 'image', 'video', 'other'][Math.floor(Math.random() * 4)],
+          hierarchicalTags: [primary, secondary, tertiary].filter(Boolean),
+          customTags: customTags
+        });
+      }
+      
+      resolve(materials);
     }, 300);
   });
+
+
 };

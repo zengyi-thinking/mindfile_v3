@@ -430,7 +430,7 @@ const submitCreateMindmap = async () => {
 // 查看思维导图
 const viewMindmap = (id) => {
   console.log("查看思维导图:", id);
-  // router.push(`/mindmap/${id}`)
+  router.push(`/mindmap/${id}`);
 };
 
 // 编辑思维导图

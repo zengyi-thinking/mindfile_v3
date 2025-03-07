@@ -24,6 +24,18 @@ const routes = [
     meta: { title: '思维导图' }
   },
   {
+    path: '/tag-mindmap',
+    name: 'TagMindMapSearch',
+    component: () => import('../views/TagMindMapSearch.vue'),
+    meta: { title: '思维导图搜索' }
+  },
+  {
+    path: '/mindmap/:id',
+    name: 'MindMapView',
+    component: () => import('../views/MindMapView.vue'),
+    meta: { title: '思维导图查看' }
+  },
+  {
     path: '/materials',
     name: 'Materials',
     component: () => import('../views/Materials.vue'),

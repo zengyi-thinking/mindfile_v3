@@ -1,6 +1,46 @@
 // 思维导图相关API
 import axios from 'axios'
 
+// 导入思维导图相关API
+export const getMindmapById = async (id) => {
+  // 获取所有思维导图
+  const allMindmaps = await getAllMindmaps();
+  
+  // 查找指定ID的思维导图
+  const mindmap = allMindmaps.find(m => m.id == id);
+  
+  if (!mindmap) {
+    throw new Error('思维导图不存在');
+  }
+  
+  // 添加节点数据
+  return {
+    ...mindmap,
+    nodes: generateMockNodes(mindmap)
+  };
+};
+
+// 生成模拟节点数据
+const generateMockNodes = (mindmap) => {
+  // 根节点
+  const rootNode = {
+    id: 'root',
+    text: mindmap.title,
+    children: []
+  };
+  
+  // 添加一些模拟资料节点
+  for (let i = 0; i < 3; i++) {
+    rootNode.children.push({
+      id: `material-${i}`,
+      text: `资料 ${i + 1}`,
+      data: { materialId: i + 1, type: 'material' }
+    });
+  }
+  
+  return [rootNode];
+};
+
 // 模拟本地存储
 const localMindmapStorage = {
   mindmaps: [],
