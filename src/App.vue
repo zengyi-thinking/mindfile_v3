@@ -1,5 +1,10 @@
 <template>
   <div class="app-container">
+    <!-- 全局加载指示器 -->
+    <div class="global-loading-indicator" v-if="isLoading">
+      <el-progress type="circle" :percentage="loadingProgress" :width="50"></el-progress>
+      <span class="loading-text">加载中...</span>
+    </div>
     <!-- 只在非登录页面显示侧边栏 -->
     <div class="sidebar" v-if="!isLoginPage">
       <div class="logo">
@@ -66,6 +71,27 @@ import { computed, ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { HomeFilled, Document, ChatDotRound, User, Setting, Share, Connection } from '@element-plus/icons-vue'
 import { getUserAvatar } from './utils/imageStorage'
+
+// 全局加载状态
+const isLoading = ref(false)
+const loadingProgress = ref(0)
+
+// 模拟加载进度
+const startLoading = () => {
+  isLoading.value = true
+  loadingProgress.value = 0
+  const interval = setInterval(() => {
+    if (loadingProgress.value >= 100) {
+      clearInterval(interval)
+      setTimeout(() => {
+        isLoading.value = false
+      }, 200)
+    } else {
+      loadingProgress.value += Math.floor(Math.random() * 10) + 5
+      if (loadingProgress.value > 100) loadingProgress.value = 100
+    }
+  }, 200)
+}
 
 const route = useRoute()
 
@@ -154,6 +180,8 @@ const watchRoute = () => {
 // 监听路由变化
 watch(() => route.path, () => {
   watchRoute()
+  // 显示加载指示器
+  startLoading()
 })
 </script>
 
@@ -162,6 +190,27 @@ watch(() => route.path, () => {
   display: flex;
   height: 100vh;
   width: 100%;
+  
+  // 全局加载指示器样式
+  .global-loading-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.8);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    
+    .loading-text {
+      margin-top: 15px;
+      font-size: 16px;
+      color: #409EFF;
+    }
+  }
   
   .sidebar {
     width: 240px;

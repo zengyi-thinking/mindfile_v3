@@ -1,5 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 
+// 使用动态导入实现路由懒加载
+// 这样可以将每个路由组件打包成单独的chunk，减少首次加载时间
 const routes = [
   {
     path: '/login',
