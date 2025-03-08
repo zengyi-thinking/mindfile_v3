@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main # 或者你使用的其他分支
+      - main # ?????????????????
 
 jobs:
   deploy:
@@ -22,10 +22,10 @@ jobs:
         run: npm install
 
       - name: Build project
-        run: npm run dev
+        run: npm run build
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist # 确保这是你的构建输出目录
+          publish_dir: ./dist # ??????????????????

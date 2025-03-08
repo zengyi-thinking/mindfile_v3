@@ -3,6 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { fileURLToPath, URL } from 'url'
 
 export default defineConfig({
+  base: '/mindfile_v3/',
   plugins: [
     vue({
       // 启用JSX支持
