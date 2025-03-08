@@ -15,6 +15,10 @@
           <el-icon><Share /></el-icon>
           <span>思维导图</span>
         </router-link>
+        <router-link to="/tag-mindmap" class="nav-item">
+          <el-icon><Connection /></el-icon>
+          <span>标签思维导图</span>
+        </router-link>
         <router-link to="/materials" class="nav-item">
           <el-icon><Document /></el-icon>
           <span>资料管理</span>
@@ -110,6 +114,7 @@ const getPageTitle = computed(() => {
   const pathMap = {
     '/dashboard': '仪表板',
     '/mindmap': '思维导图',
+    '/tag-mindmap': '标签思维导图',
     '/materials': '资料管理',
     '/forum': '讨论交流',
     '/profile': '个人中心',

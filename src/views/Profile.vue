@@ -500,17 +500,29 @@ onMounted(() => {
 <style lang="scss" scoped>
 .profile-container {
   padding: 20px;
+  animation: fadeIn 0.5s ease-in-out;
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 
   .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #f0f2f5;
 
     h1 {
-      font-size: 24px;
-      font-weight: 500;
+      font-size: 28px;
+      font-weight: 600;
       margin: 0;
+      background: linear-gradient(45deg, #42b983, #2f9768);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
 
     .user-info {
@@ -518,8 +530,19 @@ onMounted(() => {
       align-items: center;
       gap: 10px;
 
+      span {
+        font-weight: 500;
+        color: #606266;
+      }
+
       .avatar {
-        background-color: #409EFF;
+        background: linear-gradient(135deg, #42b983, #2f9768);
+        transition: transform 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        
+        &:hover {
+          transform: scale(1.05);
+        }
       }
     }
   }
@@ -531,21 +554,55 @@ onMounted(() => {
     margin-bottom: 30px;
 
     .user-card {
-      background-color: white;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+      background: linear-gradient(to bottom, #ffffff, #f9fafb);
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
       display: flex;
       flex-direction: column;
       align-items: center;
       text-align: center;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(0, 0, 0, 0.03);
+      
+      &:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      }
 
       .user-avatar {
         margin-bottom: 20px;
+        position: relative;
+        
+        &::after {
+          content: '';
+          position: absolute;
+          top: -5px;
+          left: -5px;
+          right: -5px;
+          bottom: -5px;
+          border-radius: 50%;
+          background: linear-gradient(135deg, #42b983, #2f9768);
+          opacity: 0.2;
+          z-index: -1;
+          animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+          0% { transform: scale(1); opacity: 0.2; }
+          50% { transform: scale(1.05); opacity: 0.3; }
+          100% { transform: scale(1); opacity: 0.2; }
+        }
 
         .large-avatar {
-          background-color: #409EFF;
+          background: linear-gradient(135deg, #42b983, #2f9768);
           font-size: 40px;
+          transition: transform 0.3s ease;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          
+          &:hover {
+            transform: scale(1.05);
+          }
         }
       }
       
@@ -570,16 +627,40 @@ onMounted(() => {
 
       .user-details {
         h2 {
-          margin: 0 0 10px 0;
-          font-size: 20px;
+          margin: 0 0 15px 0;
+          font-size: 22px;
+          font-weight: 600;
+          background: linear-gradient(45deg, #333333, #555555);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+          letter-spacing: 0.5px;
         }
 
         .user-meta {
           color: #606266;
           font-size: 14px;
+          background-color: rgba(66, 185, 131, 0.05);
+          padding: 12px 15px;
+          border-radius: 8px;
+          border-left: 3px solid #42b983;
 
           p {
-            margin: 5px 0;
+            margin: 8px 0;
+            transition: transform 0.2s ease;
+            display: flex;
+            align-items: center;
+            
+            &:before {
+              content: '•';
+              color: #42b983;
+              margin-right: 8px;
+              font-size: 18px;
+            }
+            
+            &:hover {
+              transform: translateX(3px);
+              color: #42b983;
+            }
           }
         }
       }
@@ -587,13 +668,34 @@ onMounted(() => {
 
     .personal-info {
       background-color: white;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+      transition: all 0.3s ease;
+      border: 1px solid rgba(0, 0, 0, 0.03);
+      
+      &:hover {
+        box-shadow: 0 6px 22px rgba(0, 0, 0, 0.1);
+      }
 
       h2 {
         margin: 0 0 20px 0;
-        font-size: 18px;
+        font-size: 20px;
+        font-weight: 600;
+        color: #42b983;
+        position: relative;
+        padding-bottom: 10px;
+        
+        &:after {
+          content: '';
+          position: absolute;
+          bottom: 0;
+          left: 0;
+          width: 40px;
+          height: 3px;
+          background: linear-gradient(90deg, #42b983, #2f9768);
+          border-radius: 3px;
+        }
       }
       
       .avatar-upload-container {
@@ -629,33 +731,144 @@ onMounted(() => {
     gap: 20px;
 
     .stats-card {
-      background-color: white;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+      background: linear-gradient(to bottom, #ffffff, #f9fafb);
+      border-radius: 12px;
+      padding: 25px 15px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
       text-align: center;
+      transition: all 0.3s ease;
+      border: 1px solid rgba(0, 0, 0, 0.03);
+      position: relative;
+      overflow: hidden;
+      
+      &:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+        
+        &::before {
+          transform: translateX(0);
+          opacity: 0.1;
+        }
+        
+        .stat-value {
+          transform: scale(1.05);
+        }
+      }
+      
+      &::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: linear-gradient(90deg, #42b983, #2f9768);
+        transform: translateX(-100%);
+        transition: transform 0.5s ease;
+        opacity: 0;
+      }
 
       h3 {
         margin: 0 0 15px 0;
         font-size: 16px;
-        color: #606266;
+        font-weight: 600;
+        color: #555;
+        position: relative;
+        display: inline-block;
       }
 
       .stat-value {
-        font-size: 28px;
-        font-weight: 500;
-        color: #409EFF;
-        margin-bottom: 5px;
+        font-size: 32px;
+        font-weight: 600;
+        background: linear-gradient(45deg, #42b983, #2f9768);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 8px;
+        transition: transform 0.3s ease;
       }
 
       .stat-label {
         font-size: 14px;
         color: #909399;
+        font-weight: 500;
+        position: relative;
+        display: inline-block;
+        padding: 3px 8px;
+        background-color: rgba(66, 185, 131, 0.1);
+        border-radius: 12px;
       }
     }
   }
 }
 
+/* 表单元素样式优化 */
+.el-form-item {
+  transition: all 0.3s ease;
+  
+  &:hover {
+    transform: translateX(5px);
+  }
+}
+
+.el-input, .el-textarea {
+  transition: all 0.3s ease;
+  
+  &:focus, &:hover {
+    box-shadow: 0 0 8px rgba(66, 185, 131, 0.2);
+  }
+}
+
+.el-button {
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+  
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(255,255,255,0.2), rgba(255,255,255,0));
+    transition: all 0.6s ease;
+  }
+  
+  &:hover::before {
+    left: 100%;
+  }
+}
+
+.el-tabs__item {
+  transition: all 0.3s ease;
+  position: relative;
+  
+  &.is-active {
+    color: #42b983 !important;
+    
+    &::after {
+      transform: scaleX(1);
+    }
+  }
+  
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: #42b983;
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+  }
+  
+  &:hover::after {
+    transform: scaleX(0.5);
+  }
+}
+
+/* 响应式布局 */
 @media (max-width: 992px) {
   .profile-content {
     grid-template-columns: 1fr !important;

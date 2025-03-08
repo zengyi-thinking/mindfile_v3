@@ -1,832 +1,657 @@
 <template>
-  <div class="tag-mindmap-search-container">
-    <div class="page-header">
-      <h1>标签思维导图</h1>
-      <div class="user-info">
-        <span>{{ currentUser.role }}</span>
-        <el-avatar :size="40" class="avatar">{{ currentUser.avatar }}</el-avatar>
-      </div>
+  <div class="tag-mindmap-search">
+    <!-- 搜索头部 -->
+    <div class="search-header">
+      <h1>标签思维导图搜索</h1>
+      <!-- 面包屑导航 -->
+      <el-breadcrumb separator="/">
+        <el-breadcrumb-item :to="{ path: '/' }">首页</el-breadcrumb-item>
+        <el-breadcrumb-item>标签搜索</el-breadcrumb-item>
+      </el-breadcrumb>
     </div>
 
+    <!-- 搜索控件 -->
     <div class="search-section">
       <el-input
         v-model="searchQuery"
-        placeholder="搜索标签或资料..."
+        placeholder="搜索思维导图..."
         class="search-input"
         clearable
-        @keyup.enter="searchTags"
+        @keyup.enter="searchByTags"
       >
         <template #prefix>
           <el-icon><Search /></el-icon>
         </template>
       </el-input>
-      <el-button type="primary" @click="searchTags">
+      <el-cascader
+        v-model="selectedTagPath"
+        :options="tagOptions"
+        :props="{ checkStrictly: true }"
+        placeholder="请选择标签路径"
+        clearable
+        class="tag-selector"
+      />
+      <el-button 
+        type="primary" 
+        @click="searchByTags"
+        :loading="loading"
+        class="search-btn"
+      >
         <el-icon><Search /></el-icon> 搜索
+      </el-button>
+      <el-button 
+        type="primary" 
+        @click="createNewMindmap"
+        class="create-btn"
+      >
+        创建新思维导图
       </el-button>
     </div>
 
-    <div class="mindmap-container">
-      <!-- 思维导图容器 -->
-      <div id="mindmap" ref="mindmapRef" class="mindmap"></div>
+    <!-- 搜索结果 -->
+    <div class="search-results">
+      <el-row :gutter="24">
+        <!-- 遍历思维导图列表 -->
+        <el-col
+          v-for="(mindmap, index) in mindmaps"
+          :key="index"
+          :xs="24"
+          :sm="12"
+          :md="8"
+        >
+          <!-- 思维导图卡片 -->
+          <el-card
+            class="mindmap-card"
+            shadow="hover"
+            @click="viewMindmap(mindmap.id)"
+          >
+            <div class="mindmap-content">
+              <!-- 思维导图图标 -->
+              <div class="mindmap-icon">
+                <el-icon :size="40"><BrainIcon /></el-icon>
+              </div>
+              <!-- 思维导图信息 -->
+              <div class="mindmap-info">
+                <h3>{{ mindmap.title }}</h3>
+                <p>{{ mindmap.description }}</p>
+                <!-- 思维导图元数据 -->
+                <div class="mindmap-meta">
+                  <el-tag size="small" type="info" effect="plain">
+                    <el-icon><Calendar /></el-icon>
+                    <span>{{ mindmap.createdAt }}</span>
+                  </el-tag>
+                  <el-tag size="small" type="success" effect="plain">
+                    <el-icon><Connection /></el-icon>
+                    <span>{{ mindmap.nodeCount }} 节点</span>
+                  </el-tag>
+                </div>
+              </div>
+            </div>
+          </el-card>
+        </el-col>
+      </el-row>
 
-      <!-- 加载状态 -->
-      <div v-if="loading" class="loading-overlay">
-        <el-loading size="large"></el-loading>
-        <p>加载中...</p>
-      </div>
-
-      <!-- 空状态 -->
-      <div v-if="!loading && !hasData" class="empty-state">
-        <el-empty description="暂无标签数据">
-          <p>请尝试搜索或选择一个标签</p>
+      <!-- 无搜索结果状态 -->
+      <div v-if="mindmaps.length === 0" class="empty-state">
+        <el-empty description="暂无搜索结果" :image-size="200">
+          <!-- 创建新思维导图按钮 -->
+          <el-button type="primary" @click="createNewMindmap">
+            创建新思维导图
+          </el-button>
         </el-empty>
       </div>
     </div>
-
-    <div class="tag-selection">
-      <h3>选择标签分类</h3>
-      <div class="tag-categories">
-        <div class="primary-categories">
-          <el-tag 
-            v-for="category in primaryCategories" 
-            :key="category"
-            :class="{ 'active-tag': selectedCategory === category }"
-            @click="selectCategory(category)"
-            effect="plain"
-            class="category-tag"
-          >
-            {{ category }}
-          </el-tag>
-        </div>
-
-        <div class="secondary-categories" v-if="selectedCategory">
-          <el-tag 
-            v-for="subcategory in secondaryCategories" 
-            :key="subcategory"
-            :class="{ 'active-tag': selectedSubcategory === subcategory }"
-            @click="selectSubcategory(subcategory)"
-            effect="plain"
-            class="subcategory-tag"
-            type="success"
-          >
-            {{ subcategory }}
-          </el-tag>
-        </div>
-
-        <div class="tertiary-tags" v-if="selectedSubcategory">
-          <el-tag 
-            v-for="tag in tertiaryTags" 
-            :key="tag"
-            :class="{ 'active-tag': selectedTertiaryTag === tag }"
-            @click="selectTertiaryTag(tag)"
-            effect="plain"
-            class="tertiary-tag"
-            type="info"
-          >
-            {{ tag }}
-          </el-tag>
-        </div>
-      </div>
-    </div>
-
-    <!-- 资料预览抽屉 -->
-    <el-drawer
-      v-model="materialDrawer.visible"
-      title="资料详情"
-      size="30%"
-      destroy-on-close
-    >
-      <div v-if="materialDrawer.material" class="material-preview">
-        <h2>{{ materialDrawer.material.name }}</h2>
-        <p>{{ materialDrawer.material.description }}</p>
-        <div class="material-meta">
-          <el-tag size="small" type="info" effect="plain">
-            <el-icon><Document /></el-icon>
-            <span>{{ materialDrawer.material.type }}</span>
-          </el-tag>
-        </div>
-        <div class="material-actions">
-          <el-button type="primary" @click="viewMaterial(materialDrawer.material.id)">
-            查看完整资料
-          </el-button>
-        </div>
-      </div>
-      <div v-else class="material-loading">
-        <el-loading></el-loading>
-        <p>加载资料信息...</p>
-      </div>
-    </el-drawer>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onBeforeUnmount, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import { hierarchicalTags, getPrimaryCategories, getSecondaryCategories, getTertiaryTags } from '../config/tags';
+import { searchMindmapsByTags } from '../api/tagBasedMindmap';
 import { ElMessage } from 'element-plus';
-import { Search, Document } from '@element-plus/icons-vue';
-import MindMap from 'simple-mind-map';
-import { getPrimaryCategories, getSecondaryCategories, getTertiaryTags } from '../config/tags';
-import { getMaterialsByTagPath } from '../api/tagBasedMindmap';
-import { getMaterialById } from '../api/materials';
 
 const router = useRouter();
 const searchQuery = ref('');
-const currentUser = ref({
-  role: "管理员",
-  avatar: "A",
-});
-
-// 思维导图相关
-const mindmapRef = ref(null);
-let mindmapInstance = null;
+const selectedTagPath = ref([]);
+const mindmaps = ref([]);
 const loading = ref(false);
-const hasData = ref(false);
 
-// 标签分类
-const primaryCategories = ref([]);
-const secondaryCategories = ref([]);
-const tertiaryTags = ref([]);
-const selectedCategory = ref('');
-const selectedSubcategory = ref('');
-const selectedTertiaryTag = ref('');
-
-// 资料预览抽屉
-const materialDrawer = ref({
-  visible: false,
-  material: null
+// 标签选项
+const tagOptions = computed(() => {
+  return getPrimaryCategories().map(primary => {
+    return {
+      value: primary,
+      label: primary,
+      children: getSecondaryCategories(primary).map(secondary => {
+        return {
+          value: secondary,
+          label: secondary,
+          children: getTertiaryTags(primary, secondary).map(tertiary => ({
+            value: tertiary,
+            label: tertiary
+          }))
+        };
+      })
+    };
+  });
 });
 
-// 初始化标签分类
-const initTagCategories = () => {
-  primaryCategories.value = getPrimaryCategories();
-};
-
-// 选择一级分类
-const selectCategory = async (category) => {
-  if (selectedCategory.value === category) {
-    // 取消选择
-    selectedCategory.value = '';
-    selectedSubcategory.value = '';
-    selectedTertiaryTag.value = '';
-    secondaryCategories.value = [];
-    tertiaryTags.value = [];
-    clearMindmap();
-  } else {
-    selectedCategory.value = category;
-    selectedSubcategory.value = '';
-    selectedTertiaryTag.value = '';
-    secondaryCategories.value = getSecondaryCategories(category);
-    tertiaryTags.value = [];
-    
-    // 生成一级分类思维导图
-    await generateMindmapForCategory(category);
-  }
-};
-
-// 选择二级分类
-const selectSubcategory = async (subcategory) => {
-  if (selectedSubcategory.value === subcategory) {
-    // 取消选择
-    selectedSubcategory.value = '';
-    selectedTertiaryTag.value = '';
-    tertiaryTags.value = [];
-    
-    // 回到一级分类思维导图
-    await generateMindmapForCategory(selectedCategory.value);
-  } else {
-    selectedSubcategory.value = subcategory;
-    selectedTertiaryTag.value = '';
-    tertiaryTags.value = getTertiaryTags(selectedCategory.value, subcategory);
-    
-    // 生成二级分类思维导图
-    await generateMindmapForSubcategory(selectedCategory.value, subcategory);
-  }
-};
-
-// 选择三级标签
-const selectTertiaryTag = async (tag) => {
-  if (selectedTertiaryTag.value === tag) {
-    // 取消选择
-    selectedTertiaryTag.value = '';
-    
-    // 回到二级分类思维导图
-    await generateMindmapForSubcategory(selectedCategory.value, selectedSubcategory.value);
-  } else {
-    selectedTertiaryTag.value = tag;
-    
-    // 生成三级标签思维导图
-    await generateMindmapForTag(selectedCategory.value, selectedSubcategory.value, tag);
-  }
-};
-
-// 搜索标签
-const searchTags = async () => {
-  if (!searchQuery.value.trim()) {
-    ElMessage.warning('请输入搜索关键词');
+// 根据标签搜索思维导图
+const searchByTags = async () => {
+  if (selectedTagPath.value.length === 0) {
+    ElMessage.warning('请选择标签路径');
     return;
   }
-  
-  loading.value = true;
-  try {
-    // 搜索标签和资料
-    await generateMindmapForSearch(searchQuery.value);
-  } catch (error) {
-    console.error('搜索标签出错:', error);
-    ElMessage.error('搜索标签出错');
-    hasData.value = false;
-  } finally {
-    loading.value = false;
-  }
-};
 
-// 生成一级分类思维导图
-const generateMindmapForCategory = async (category) => {
   loading.value = true;
   try {
-    // 获取该分类下的所有二级分类
-    const subcategories = getSecondaryCategories(category);
+    const results = await searchMindmapsByTags(selectedTagPath.value);
+    mindmaps.value = results;
     
-    // 创建思维导图数据
-    const rootNode = {
-      id: 'root',
-      text: category,
-      children: []
-    };
-    
-    // 添加二级分类节点
-    subcategories.forEach(subcategory => {
-      rootNode.children.push({
-        id: `subcategory-${subcategory}`,
-        text: subcategory,
-        data: { type: 'subcategory', value: subcategory }
-      });
-    });
-    
-    // 渲染思维导图
-    renderMindmap(rootNode);
-    hasData.value = true;
-  } catch (error) {
-    console.error('生成思维导图出错:', error);
-    ElMessage.error('生成思维导图出错');
-    hasData.value = false;
-  } finally {
-    loading.value = false;
-  }
-};
-
-// 生成二级分类思维导图
-const generateMindmapForSubcategory = async (category, subcategory) => {
-  loading.value = true;
-  try {
-    // 获取该二级分类下的所有三级标签
-    const tags = getTertiaryTags(category, subcategory);
-    
-    // 创建思维导图数据
-    const rootNode = {
-      id: 'root',
-      text: category,
-      children: [
-        {
-          id: `subcategory-${subcategory}`,
-          text: subcategory,
-          children: []
-        }
-      ]
-    };
-    
-    // 添加三级标签节点
-    const subcategoryNode = rootNode.children[0];
-    tags.forEach(tag => {
-      subcategoryNode.children.push({
-        id: `tag-${tag}`,
-        text: tag,
-        data: { type: 'tag', value: tag }
-      });
-    });
-    
-    // 渲染思维导图
-    renderMindmap(rootNode);
-    hasData.value = true;
-  } catch (error) {
-    console.error('生成思维导图出错:', error);
-    ElMessage.error('生成思维导图出错');
-    hasData.value = false;
-  } finally {
-    loading.value = false;
-  }
-};
-
-// 生成三级标签思维导图
-const generateMindmapForTag = async (category, subcategory, tag) => {
-  loading.value = true;
-  try {
-    // 获取与该标签相关的资料
-    const tagPath = [category, subcategory, tag];
-    const materials = await getMaterialsByTagPath(tagPath);
-    
-    // 创建思维导图数据
-    const rootNode = {
-      id: 'root',
-      text: category,
-      children: [
-        {
-          id: `subcategory-${subcategory}`,
-          text: subcategory,
-          children: [
-            {
-              id: `tag-${tag}`,
-              text: tag,
-              children: []
-            }
-          ]
-        }
-      ]
-    };
-    
-    // 添加资料节点
-    const tagNode = rootNode.children[0].children[0];
-    
-    // 按自定义标签分组添加资料
-    materials.forEach(material => {
-      // 检查资料是否有自定义标签
-      if (material.customTags && material.customTags.length > 0) {
-        // 为每个自定义标签创建节点
-        material.customTags.forEach(customTag => {
-          // 检查是否已存在该自定义标签节点
-          let customTagNode = tagNode.children.find(node => 
-            node.data && node.data.type === 'customTag' && node.text === customTag
-          );
-          
-          // 如果不存在，创建新的自定义标签节点
-          if (!customTagNode) {
-            customTagNode = {
-              id: `customTag-${customTag.replace(/\s+/g, '-')}`,
-              text: customTag,
-              data: { type: 'customTag', value: customTag },
-              children: []
-            };
-            tagNode.children.push(customTagNode);
-          }
-          
-          // 将资料添加到自定义标签节点下
-          customTagNode.children.push({
-            id: `material-${material.id}`,
-            text: material.name,
-            data: { type: 'material', materialId: material.id }
-          });
-        });
-      } else {
-        // 如果没有自定义标签，直接添加到三级标签节点下
-        tagNode.children.push({
-          id: `material-${material.id}`,
-          text: material.name,
-          data: { type: 'material', materialId: material.id }
-        });
-      }
-    });
-    
-    // 渲染思维导图
-    renderMindmap(rootNode);
-    hasData.value = true;
-  } catch (error) {
-    console.error('生成思维导图出错:', error);
-    ElMessage.error('生成思维导图出错');
-    hasData.value = false;
-  } finally {
-    loading.value = false;
-  }
-};
-
-// 生成搜索结果思维导图
-const generateMindmapForSearch = async (keyword) => {
-  loading.value = true;
-  try {
-    // 搜索匹配的标签
-    const matchedTags = searchMatchingTags(keyword);
-    
-    if (matchedTags.length === 0) {
-      ElMessage.warning('未找到匹配的标签');
-      hasData.value = false;
-      loading.value = false;
-      return;
+    if (results.length === 0) {
+      ElMessage.info('未找到匹配的思维导图');
     }
-    
-    // 创建思维导图数据
-    const rootNode = {
-      id: 'root',
-      text: `搜索: ${keyword}`,
-      children: []
-    };
-    
-    // 添加匹配的标签节点
-    for (const tag of matchedTags) {
-      const { primary, secondary, tertiary } = tag;
-      
-      // 查找或创建一级分类节点
-      let primaryNode = rootNode.children.find(node => node.text === primary);
-      if (!primaryNode) {
-        primaryNode = {
-          id: `primary-${primary}`,
-          text: primary,
-          children: []
-        };
-        rootNode.children.push(primaryNode);
-      }
-      
-      // 查找或创建二级分类节点
-      if (secondary) {
-        let secondaryNode = primaryNode.children.find(node => node.text === secondary);
-        if (!secondaryNode) {
-          secondaryNode = {
-            id: `secondary-${secondary}`,
-            text: secondary,
-            children: []
-          };
-          primaryNode.children.push(secondaryNode);
-        }
-        
-        // 查找或创建三级标签节点
-        if (tertiary) {
-          let tertiaryNode = secondaryNode.children.find(node => node.text === tertiary);
-          if (!tertiaryNode) {
-            tertiaryNode = {
-              id: `tertiary-${tertiary}`,
-              text: tertiary,
-              children: []
-            };
-            secondaryNode.children.push(tertiaryNode);
-          }
-          
-          // 获取与该标签相关的资料
-          const tagPath = [primary, secondary, tertiary];
-          const materials = await getMaterialsByTagPath(tagPath);
-          
-          // 添加资料节点，按自定义标签分组
-          materials.forEach(material => {
-            // 检查资料是否有自定义标签
-            if (material.customTags && material.customTags.length > 0) {
-              // 为每个自定义标签创建节点
-              material.customTags.forEach(customTag => {
-                // 检查是否已存在该自定义标签节点
-                let customTagNode = tertiaryNode.children.find(node => 
-                  node.data && node.data.type === 'customTag' && node.text === customTag
-                );
-                
-                // 如果不存在，创建新的自定义标签节点
-                if (!customTagNode) {
-                  customTagNode = {
-                    id: `customTag-${customTag.replace(/\s+/g, '-')}`,
-                    text: customTag,
-                    data: { type: 'customTag', value: customTag },
-                    children: []
-                  };
-                  tertiaryNode.children.push(customTagNode);
-                }
-                
-                // 将资料添加到自定义标签节点下
-                customTagNode.children.push({
-                  id: `material-${material.id}`,
-                  text: material.name,
-                  data: { type: 'material', materialId: material.id }
-                });
-              });
-            } else {
-              // 如果没有自定义标签，直接添加到三级标签节点下
-              tertiaryNode.children.push({
-                id: `material-${material.id}`,
-                text: material.name,
-                data: { type: 'material', materialId: material.id }
-              });
-            }
-          });
-        }
-      }
-    }
-    
-    // 渲染思维导图
-    renderMindmap(rootNode);
-    hasData.value = true;
   } catch (error) {
-    console.error('搜索标签出错:', error);
-    ElMessage.error('搜索标签出错');
-    hasData.value = false;
+    console.error('搜索出错:', error);
+    ElMessage.error('搜索失败');
   } finally {
     loading.value = false;
   }
 };
 
-// 搜索匹配的标签
-const searchMatchingTags = (keyword) => {
-  const result = [];
-  const lowerKeyword = keyword.toLowerCase();
-  
-  // 搜索所有标签
-  const primaryCategories = getPrimaryCategories();
-  
-  primaryCategories.forEach(primary => {
-    const secondaryCategories = getSecondaryCategories(primary);
-    
-    secondaryCategories.forEach(secondary => {
-      const tertiaryTags = getTertiaryTags(primary, secondary);
-      
-      tertiaryTags.forEach(tertiary => {
-        // 检查标签是否匹配关键词
-        if (primary.toLowerCase().includes(lowerKeyword) ||
-            secondary.toLowerCase().includes(lowerKeyword) ||
-            tertiary.toLowerCase().includes(lowerKeyword)) {
-          result.push({
-            primary,
-            secondary,
-            tertiary
-          });
-        }
-      });
-    });
-  });
-  
-  return result;
+// 查看思维导图
+const viewMindmap = (id) => {
+  router.push(`/mindmap/${id}`);
 };
 
-// 渲染思维导图
-const renderMindmap = (rootNode) => {
-  // 销毁已有实例
-  if (mindmapInstance) {
-    mindmapInstance.destroy();
-  }
-  
-  // 创建思维导图实例
-  mindmapInstance = new MindMap({
-    el: mindmapRef.value,
-    data: {
-      root: rootNode
-    },
-    theme: {
-      // 主题配置
-      backgroundColor: '#f8f9fa',
-      lineColor: '#4a90e2',
-      lineWidth: 2,
-      rootNodeBorderColor: '#4a90e2',
-      rootNodeBackgroundColor: '#4a90e2',
-      rootNodeColor: '#ffffff',
-      secondNodeBorderColor: '#5cb85c',
-      secondNodeBackgroundColor: '#5cb85c',
-      secondNodeColor: '#ffffff',
-      thirdNodeBorderColor: '#f0ad4e',
-      thirdNodeBackgroundColor: '#f0ad4e',
-      thirdNodeColor: '#ffffff',
-      fourthNodeBorderColor: '#d9534f',
-      fourthNodeBackgroundColor: '#d9534f',
-      fourthNodeColor: '#ffffff'
-    },
-    mode: 'readonly',
-    enableFreeDrag: true,
-    watermark: {
-      text: 'MindFile',
-      opacity: 0.1
-    }
-  });
-  
-  // 注册节点点击事件
-  mindmapInstance.on('node_click', (node) => {
-    handleNodeClick(node);
-  });
-  
-  // 自动布局
-  mindmapInstance.layout();
+// 创建新思维导图
+const createNewMindmap = () => {
+  router.push('/mindmap/new');
 };
-
-// 清除思维导图
-const clearMindmap = () => {
-  if (mindmapInstance) {
-    mindmapInstance.destroy();
-    mindmapInstance = null;
-  }
-  hasData.value = false;
-};
-
-// 处理节点点击
-const handleNodeClick = async (node) => {
-  // 获取节点数据
-  const nodeData = node.data.data;
-  
-  if (!nodeData) return;
-  
-  // 根据节点类型处理点击事件
-  switch (nodeData.type) {
-    case 'subcategory':
-      // 点击二级分类节点
-      selectSubcategory(nodeData.value);
-      break;
-    case 'tag':
-      // 点击三级标签节点
-      selectTertiaryTag(nodeData.value);
-      break;
-    case 'material':
-      // 点击资料节点
-      try {
-        materialDrawer.value.material = null;
-        materialDrawer.value.visible = true;
-        
-        // 加载资料详情
-        const material = await getMaterialById(nodeData.materialId);
-        materialDrawer.value.material = material;
-      } catch (error) {
-        console.error('加载资料详情失败:', error);
-        ElMessage.error('加载资料详情失败');
-        materialDrawer.value.visible = false;
-      }
-      break;
-  }
-};
-
-// 查看完整资料
-const viewMaterial = (materialId) => {
-  materialDrawer.value.visible = false;
-  router.push(`/materials/${materialId}`);
-};
-
-// 生命周期钩子
-onMounted(() => {
-  initTagCategories();
-});
-
-onBeforeUnmount(() => {
-  // 销毁思维导图实例
-  if (mindmapInstance) {
-    mindmapInstance.destroy();
-    mindmapInstance = null;
-  }
-});
 </script>
 
 <style lang="scss" scoped>
-.tag-mindmap-search-container {
+.tag-mindmap-search {
   padding: 24px;
-  background-color: #f9fafc;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e4ecf7 50%, #d8e6ff 100%);
+  background-size: 200% 200%;
   min-height: calc(100vh - 60px);
-  
-  .page-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 24px;
-    
+  animation: gradientShift 15s ease infinite;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 70%);
+    opacity: 0.6;
+    animation: ripple 15s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  @keyframes ripple {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  .search-header {
+    margin-bottom: 32px;
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 16px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    backdrop-filter: blur(10px);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    border-left: 4px solid #409eff;
+    position: relative;
+    z-index: 1;
+
+    &:hover {
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.12);
+      transform: translateY(-4px);
+    }
+
     h1 {
       font-size: 28px;
       font-weight: 600;
-      margin: 0;
-      color: #303133;
+      margin: 0 0 12px;
+      background: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+      text-shadow: 0 2px 10px rgba(58, 123, 213, 0.2);
+      animation: colorShift 8s ease infinite;
     }
-    
-    .user-info {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      
-      span {
-        font-size: 14px;
-        color: #606266;
-      }
-      
-      .avatar {
-        background-color: #409eff;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      }
+
+    @keyframes colorShift {
+      0% { filter: hue-rotate(0deg); }
+      50% { filter: hue-rotate(15deg); }
+      100% { filter: hue-rotate(0deg); }
     }
   }
-  
+
   .search-section {
     display: flex;
-    margin-bottom: 24px;
-    gap: 12px;
     align-items: center;
-    
-    .search-input {
-      flex: 1;
-      max-width: 500px;
-    }
-  }
-  
-  .mindmap-container {
-    position: relative;
-    height: 500px;
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+    gap: 16px;
     margin-bottom: 24px;
+    padding: 24px;
+    background: rgba(255, 255, 255, 0.95);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
     overflow: hidden;
-    
-    .mindmap {
-      width: 100%;
-      height: 100%;
-    }
-    
-    .loading-overlay {
+    z-index: 1;
+
+    &::before {
+      content: '';
       position: absolute;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      background-color: rgba(255, 255, 255, 0.8);
-      z-index: 10;
+      background: linear-gradient(135deg, rgba(64, 158, 255, 0.05) 0%, rgba(102, 177, 255, 0.1) 100%);
+      z-index: -1;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    &:hover {
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+      transform: translateY(-4px);
+
+      &::before {
+        opacity: 1;
+      }
+    }
+
+    .search-input {
+      flex: 1;
+      :deep(.el-input__wrapper) {
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        padding: 0 16px;
+
+        &:hover {
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+          background: rgba(255, 255, 255, 1);
+          transform: translateY(-2px);
+        }
+
+        &:focus-within {
+          box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.2);
+          background: rgba(255, 255, 255, 1);
+          transform: translateY(-2px);
+        }
+      }
+
+      :deep(.el-input__inner) {
+        font-size: 16px;
+        padding: 12px 0;
+      }
+    }
+
+    .tag-selector {
+      width: 240px;
+      :deep(.el-input__wrapper) {
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        background: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(0, 0, 0, 0.05);
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        padding: 0 16px;
+
+        &:hover {
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+          background: rgba(255, 255, 255, 1);
+          transform: translateY(-2px);
+        }
+
+        &:focus-within {
+          box-shadow: 0 0 0 3px rgba(64, 158, 255, 0.2);
+          background: rgba(255, 255, 255, 1);
+          transform: translateY(-2px);
+        }
+      }
+
+      :deep(.el-input__inner) {
+        font-size: 16px;
+        padding: 12px 0;
+      }
+    }
+
+    .search-btn {
+      margin-right: 12px;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%);
+      border: none;
+      box-shadow: 0 4px 12px rgba(58, 123, 213, 0.3);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+      overflow: hidden;
+
+      &::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        transform: scale(0.5);
+      }
+
+      &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(58, 123, 213, 0.4);
+        
+        &::after {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      &:active {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(58, 123, 213, 0.3);
+      }
+
+      .el-icon {
+        margin-right: 4px;
+        transition: transform 0.3s ease;
+      }
+
+      &:hover .el-icon {
+        transform: scale(1.2);
+      }
+    }
+
+    .create-btn {
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%);
+      border: none;
+      box-shadow: 0 4px 12px rgba(91, 134, 229, 0.3);
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      position: relative;
+      overflow: hidden;
+
+      &::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        transform: scale(0.5);
+      }
+
+      &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(91, 134, 229, 0.4);
+        
+        &::after {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      &:active {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(91, 134, 229, 0.3);
+      }
+    }
+  }
+
+  .search-results {
+    padding: 8px;
+    position: relative;
+    z-index: 1;
+    
+    .el-row {
+      margin-left: -12px;
+      margin-right: -12px;
+    }
+    
+    .el-col {
+      padding-left: 12px;
+      padding-right: 12px;
+    }
+  }
+
+  .mindmap-card {
+    margin-bottom: 28px;
+    transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+    border-radius: 16px;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(10px);
+    border: none;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(58, 123, 213, 0.1) 0%, rgba(0, 210, 255, 0.1) 100%);
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      z-index: -1;
+    }
+
+    &:hover {
+      transform: translateY(-8px) scale(1.03);
+      box-shadow: 0 16px 32px rgba(58, 123, 213, 0.15);
       
-      p {
-        margin-top: 16px;
-        color: #606266;
+      &::after {
+        opacity: 1;
+      }
+
+      .mindmap-icon {
+        background: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%);
+        color: white;
+        transform: scale(1.1) rotate(5deg);
+      }
+
+      h3 {
+        background: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
       }
     }
     
-    .empty-state {
-      height: 100%;
+    .mindmap-content {
       display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-    }
-  }
-  
-  .tag-selection {
-    background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
-    padding: 20px;
-    
-    h3 {
-      margin-top: 0;
-      margin-bottom: 16px;
-      font-size: 18px;
-      font-weight: 600;
-      color: #303133;
-    }
-    
-    .tag-categories {
-      .primary-categories,
-      .secondary-categories,
-      .tertiary-tags {
-        margin-bottom: 16px;
+      padding: 20px;
+      gap: 20px;
+      
+      .mindmap-icon {
         display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
+        align-items: center;
+        justify-content: center;
+        width: 70px;
+        height: 70px;
+        background: linear-gradient(135deg, #e6f7ff 0%, #bae7ff 100%);
+        border-radius: 14px;
+        color: #1890ff;
+        transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: 0 4px 12px rgba(24, 144, 255, 0.1);
         
-        .category-tag,
-        .subcategory-tag,
-        .tertiary-tag {
-          cursor: pointer;
-          transition: all 0.3s;
+        .el-icon {
+          transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+      }
+      
+      .mindmap-info {
+        flex: 1;
+        min-width: 0;
+        
+        h3 {
+          font-size: 18px;
+          font-weight: 600;
+          margin: 0 0 8px;
+          color: #303133;
+          transition: all 0.3s ease;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+        
+        p {
+          font-size: 14px;
+          color: #606266;
+          margin: 0 0 12px;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          line-height: 1.5;
+          height: 42px;
+          transition: color 0.3s ease;
+        }
+        
+        .mindmap-meta {
+          display: flex;
+          gap: 12px;
           
-          &:hover {
-            transform: translateY(-2px);
-          }
-          
-          &.active-tag {
-            font-weight: bold;
-            transform: translateY(-2px);
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+          .el-tag {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            border-radius: 8px;
+            padding: 4px 10px;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            
+            &:hover {
+              transform: translateY(-3px) scale(1.05);
+              box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            }
+            
+            .el-icon {
+              margin-right: 2px;
+              transition: transform 0.3s ease;
+            }
+
+            &:hover .el-icon {
+              transform: scale(1.2);
+            }
           }
         }
       }
     }
   }
   
-  .material-preview {
-    padding: 16px;
+  .empty-state {
+    margin-top: 60px;
+    padding: 40px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
+    backdrop-filter: blur(10px);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
     
-    h2 {
-      margin-top: 0;
-      margin-bottom: 16px;
-      font-size: 20px;
-      color: #303133;
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(58, 123, 213, 0.05) 0%, rgba(0, 210, 255, 0.05) 100%);
+      opacity: 0;
+      transition: opacity 0.5s ease;
+      z-index: -1;
     }
     
-    p {
-      margin-bottom: 16px;
-      color: #606266;
-      line-height: 1.6;
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 30px rgba(58, 123, 213, 0.12);
+      
+      &::before {
+        opacity: 1;
+      }
     }
     
-    .material-meta {
-      margin-bottom: 24px;
-    }
-    
-    .material-actions {
-      margin-top: 24px;
-    }
-  }
-  
-  .material-loading {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    height: 200px;
-    
-    p {
-      margin-top: 16px;
-      color: #606266;
+    .el-button {
+      margin-top: 20px;
+      padding: 12px 28px;
+      font-size: 16px;
+      font-weight: 600;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%);
+      border: none;
+      transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      box-shadow: 0 4px 12px rgba(58, 123, 213, 0.3);
+      position: relative;
+      overflow: hidden;
+      
+      &::after {
+        content: '';
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        transform: scale(0.5);
+      }
+      
+      &:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 20px rgba(58, 123, 213, 0.4);
+        
+        &::after {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+
+      &:active {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(58, 123, 213, 0.3);
+      }
     }
   }
 }

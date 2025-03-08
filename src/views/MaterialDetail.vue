@@ -11,6 +11,25 @@
         <div class="content" v-html="material.content"></div>
       </div>
 
+      <!-- 新增思维导图展示区域 -->
+      <div class="mindmaps-section">
+        <h2>相关思维导图（{{ relatedMindmaps.length }}）</h2>
+        <div v-if="relatedMindmaps.length > 0" class="mindmaps-list">
+          <div v-for="mindmap in relatedMindmaps" :key="mindmap.id" class="mindmap-item">
+            <h3>{{ mindmap.title }}</h3>
+            <p>{{ mindmap.description }}</p>
+            <div class="mindmap-meta">
+              <span>节点数：{{ mindmap.nodeCount }}</span>
+              <span>创建时间：{{ formatDate(mindmap.createdAt) }}</span>
+            </div>
+            <button @click="viewMindmap(mindmap.id)">查看</button>
+          </div>
+        </div>
+        <div v-else class="no-mindmaps">
+          暂无相关思维导图
+        </div>
+      </div>
+
       <div class="comments-section">
         <h2>评论（{{ comments.length }}）</h2>
         <div class="comment-form">
@@ -35,6 +54,7 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { getMaterialDetail, getMaterialComments, addComment } from '../api/materials.js'
+import { searchMindmapsByTags } from '../api/tagBasedMindmap.js'
 import { formatDate } from '../utils/date.js'
 
 export default {
@@ -45,6 +65,7 @@ export default {
     const comments = ref([])
     const newComment = ref('')
     const loading = ref(true)
+    const relatedMindmaps = ref([])
 
     const fetchData = async () => {
       try {
@@ -54,6 +75,12 @@ export default {
         ])
         material.value = detailRes.data
         comments.value = commentsRes.data
+        
+        // 获取相关思维导图
+        if (material.value.hierarchicalTags) {
+          const mindmaps = await searchMindmapsByTags(material.value.hierarchicalTags)
+          relatedMindmaps.value = mindmaps
+        }
       } catch (error) {
         console.error('获取数据失败:', error)
       } finally {
@@ -75,6 +102,10 @@ export default {
       }
     }
 
+    const viewMindmap = (id) => {
+      window.open(`/mindmap/${id}`, '_blank')
+    }
+
     onMounted(() => {
       fetchData()
     })
@@ -84,8 +115,10 @@ export default {
       comments,
       newComment,
       loading,
+      relatedMindmaps,
       formatDate,
-      submitComment
+      submitComment,
+      viewMindmap
     }
   }
 }
@@ -119,6 +152,45 @@ export default {
 
 .meta span {
   margin-right: 15px;
+}
+
+.mindmaps-section {
+  margin: 40px 0;
+  padding: 20px;
+  background: #f5f7fa;
+  border-radius: 8px;
+}
+
+.mindmaps-list {
+  margin-top: 20px;
+}
+
+.mindmap-item {
+  background: white;
+  padding: 15px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.mindmap-item h3 {
+  margin: 0 0 10px 0;
+  color: #409eff;
+}
+
+.mindmap-meta {
+  color: #666;
+  margin: 10px 0;
+}
+
+.mindmap-meta span {
+  margin-right: 15px;
+}
+
+.no-mindmaps {
+  text-align: center;
+  color: #999;
+  padding: 20px;
 }
 
 .comments-section {

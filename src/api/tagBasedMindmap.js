@@ -1,6 +1,36 @@
 // 基于标签自动生成思维导图的API
 import { createMindmap, updateMindmap, getAllMindmaps } from './mindmap';
 import { hierarchicalTags, getPrimaryCategories, getSecondaryCategories, getTertiaryTags } from '../config/tags';
+import { getAllMaterialsFromDB } from './storage';
+
+// 根据标签路径搜索思维导图
+export const searchMindmapsByTags = async (tagPath) => {
+  try {
+    const [primary, secondary, tertiary] = tagPath;
+    
+    // 获取所有思维导图
+    const allMindmaps = await getAllMindmaps();
+    
+    // 过滤匹配的思维导图
+    const results = allMindmaps.filter(mindmap => {
+      // 检查一级标签
+      if (mindmap.tags?.primary !== primary) return false;
+      
+      // 检查二级标签
+      if (secondary && mindmap.tags?.secondary !== secondary) return false;
+      
+      // 检查三级标签
+      if (tertiary && mindmap.tags?.tertiary !== tertiary) return false;
+      
+      return true;
+    });
+    
+    return results;
+  } catch (error) {
+    console.error('根据标签搜索思维导图失败:', error);
+    return [];
+  }
+};
 
 // 根据标签生成思维导图
 export const generateMindmapFromTags = async (tagPath, materials = []) => {
@@ -315,53 +345,30 @@ export const organizeMaterialsByTags = async (materials) => {
 
 // 根据标签路径获取相关资料
 export const getMaterialsByTagPath = async (tagPath) => {
-  // 实际应用中，这里会调用后端API获取相关资料
-  // 这里根据不同标签路径返回不同的模拟数据
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      // 根据标签路径生成不同的示例资料
-      const [primary, secondary, tertiary] = tagPath;
-      const materials = [];
+  try {
+    // 获取所有资料
+    const allMaterials = await getAllMaterialsFromDB();
+    
+    // 过滤出匹配标签路径的资料
+    const [primary, secondary, tertiary] = tagPath;
+    const filteredMaterials = allMaterials.filter(material => {
+      const materialTags = material.hierarchicalTags || [];
       
-      // 为每个标签路径生成2-5个资料
-      const count = Math.floor(Math.random() * 4) + 2;
+      // 检查一级标签
+      if (materialTags[0] !== primary) return false;
       
-      // 常用自定义标签列表，用于随机分配
-      const commonCustomTags = [
-        '重要', '紧急', '参考', '草稿', '完成', '进行中',
-        '高质量', '入门级', '进阶', '专家级',
-        'Python', 'Java', 'JavaScript', 'C++', 'Go'
-      ];
+      // 检查二级标签
+      if (secondary && materialTags[1] !== secondary) return false;
       
-      for (let i = 1; i <= count; i++) {
-        // 随机决定是否添加自定义标签
-        const hasCustomTags = Math.random() > 0.3; // 70%的资料有自定义标签
-        
-        // 随机选择1-3个自定义标签
-        const customTags = [];
-        if (hasCustomTags) {
-          const tagCount = Math.floor(Math.random() * 3) + 1;
-          for (let j = 0; j < tagCount; j++) {
-            const randomTag = commonCustomTags[Math.floor(Math.random() * commonCustomTags.length)];
-            if (!customTags.includes(randomTag)) {
-              customTags.push(randomTag);
-            }
-          }
-        }
-        
-        materials.push({
-          id: Math.floor(Math.random() * 1000) + 1,
-          name: `${primary}-${secondary || ''}${tertiary ? '-' + tertiary : ''} 资料${i}`,
-          description: `这是关于${primary}${secondary ? '/' + secondary : ''}${tertiary ? '/' + tertiary : ''} 的资料示例`,
-          type: ['document', 'image', 'video', 'other'][Math.floor(Math.random() * 4)],
-          hierarchicalTags: [primary, secondary, tertiary].filter(Boolean),
-          customTags: customTags
-        });
-      }
+      // 检查三级标签
+      if (tertiary && materialTags[2] !== tertiary) return false;
       
-      resolve(materials);
-    }, 300);
-  });
-
-
+      return true;
+    });
+    
+    return filteredMaterials;
+  } catch (error) {
+    console.error('根据标签路径获取资料失败:', error);
+    return [];
+  }
 };

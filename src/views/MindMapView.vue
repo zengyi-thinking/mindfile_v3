@@ -180,29 +180,59 @@ const initMindmap = () => {
       }
     },
     theme: {
-      // 主题配置
+      // 现代化主题配置
       backgroundColor: '#f8f9fa',
-      lineColor: '#4a90e2',
-      lineWidth: 2,
-      rootNodeBorderColor: '#4a90e2',
-      rootNodeBackgroundColor: '#4a90e2',
+      lineColor: '#6366f1',
+      lineWidth: 3,
+      lineStyle: 'curve', // 曲线连接线
+      rootNodeBorderColor: '#6366f1',
+      rootNodeBackgroundColor: '#818cf8',
+      rootNodeBackgroundImage: 'linear-gradient(45deg, #6366f1, #818cf8)',
       rootNodeColor: '#ffffff',
-      secondNodeBorderColor: '#5cb85c',
-      secondNodeBackgroundColor: '#5cb85c',
+      rootNodeFontSize: '18px',
+      rootNodeBorderWidth: 3,
+      rootNodeBorderRadius: 8,
+      rootNodePadding: 15,
+      secondNodeBorderColor: '#10b981',
+      secondNodeBackgroundColor: '#34d399',
+      secondNodeBackgroundImage: 'linear-gradient(45deg, #10b981, #34d399)',
       secondNodeColor: '#ffffff',
-      thirdNodeBorderColor: '#f0ad4e',
-      thirdNodeBackgroundColor: '#f0ad4e',
+      secondNodeFontSize: '16px',
+      secondNodeBorderWidth: 2,
+      secondNodeBorderRadius: 6,
+      secondNodePadding: 12,
+      thirdNodeBorderColor: '#f59e0b',
+      thirdNodeBackgroundColor: '#fbbf24',
+      thirdNodeBackgroundImage: 'linear-gradient(45deg, #f59e0b, #fbbf24)',
       thirdNodeColor: '#ffffff',
-      fourthNodeBorderColor: '#d9534f',
-      fourthNodeBackgroundColor: '#d9534f',
-      fourthNodeColor: '#ffffff'
+      thirdNodeFontSize: '14px',
+      thirdNodeBorderWidth: 2,
+      thirdNodeBorderRadius: 6,
+      thirdNodePadding: 10,
+      fourthNodeBorderColor: '#ef4444',
+      fourthNodeBackgroundColor: '#f87171',
+      fourthNodeBackgroundImage: 'linear-gradient(45deg, #ef4444, #f87171)',
+      fourthNodeColor: '#ffffff',
+      fourthNodeFontSize: '14px',
+      fourthNodeBorderWidth: 2,
+      fourthNodeBorderRadius: 6,
+      fourthNodePadding: 10,
+      // 节点激活状态
+      nodeActiveBorderColor: '#8b5cf6',
+      nodeActiveBorderWidth: 3,
+      nodeActiveBoxShadow: '0 0 12px rgba(139, 92, 246, 0.6)'
     },
     mode: isEditing.value ? 'edit' : 'readonly',
     enableFreeDrag: true,
     watermark: {
       text: 'MindFile',
-      opacity: 0.1
-    }
+      opacity: 0.08,
+      color: '#6366f1'
+    },
+    // 添加动画配置
+    enableNodeTransitionMove: true, // 启用节点过渡动画
+    nodeTransitionMoveDuration: 400, // 节点过渡动画持续时间
+    enableExpandOrCollapseNodeAnimation: true, // 启用展开/折叠节点动画
   });
   
   // 注册节点点击事件
@@ -219,17 +249,45 @@ const handleNodeClick = async (node) => {
   // 如果是编辑模式，不处理点击事件
   if (isEditing.value) return;
   
+  // 添加节点点击动画效果
+  if (node.nodeData.el) {
+    // 添加点击波纹效果
+    const el = node.nodeData.el;
+    el.style.transition = 'all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)';
+    el.style.transform = 'scale(1.05)';
+    el.style.boxShadow = '0 0 15px rgba(99, 102, 241, 0.5)';
+    
+    // 恢复原始状态
+    setTimeout(() => {
+      el.style.transform = 'scale(1)';
+      el.style.boxShadow = '';
+    }, 300);
+  }
+  
   // 检查是否是资料节点
   if (node.data && node.data.data && node.data.data.type === 'material') {
     const materialId = node.data.data.materialId;
     if (materialId) {
       try {
+        // 显示加载状态
         materialDrawer.value.material = null;
         materialDrawer.value.visible = true;
+        
+        // 添加加载动画
+        ElMessage.info({
+          message: '正在加载资料信息...',
+          duration: 1000
+        });
         
         // 加载资料详情
         const material = await getMaterialById(materialId);
         materialDrawer.value.material = material;
+        
+        // 成功加载提示
+        ElMessage.success({
+          message: '资料加载成功',
+          duration: 1500
+        });
       } catch (error) {
         console.error('加载资料详情失败:', error);
         ElMessage.error('加载资料详情失败');
@@ -261,57 +319,112 @@ onBeforeUnmount(() => {
 
 <style lang="scss" scoped>
 .mindmap-view-container {
-  padding: 24px;
+  padding: 28px;
   background-color: #f9fafc;
+  background-image: linear-gradient(to bottom right, #f9fafc, #f0f4ff);
   min-height: calc(100vh - 60px);
+  transition: all 0.3s ease;
   
   .page-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 24px;
+    margin-bottom: 28px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(99, 102, 241, 0.1);
     
     .header-left {
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 18px;
       
       h1 {
         margin: 0;
-        font-size: 24px;
+        font-size: 28px;
         font-weight: 600;
         color: #303133;
+        background: linear-gradient(45deg, #6366f1, #8b5cf6);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 0 2px 10px rgba(99, 102, 241, 0.1);
+        transition: all 0.3s ease;
       }
     }
     
     .header-actions {
       display: flex;
-      gap: 12px;
+      gap: 14px;
+      
+      .el-button {
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+        
+        &:active {
+          transform: translateY(0);
+        }
+      }
     }
   }
   
   .mindmap-description {
-    margin-bottom: 20px;
+    margin-bottom: 24px;
     color: #606266;
     font-size: 16px;
+    line-height: 1.6;
     background-color: #fff;
-    padding: 16px;
-    border-radius: 8px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(99, 102, 241, 0.1);
+    transition: all 0.3s ease;
+    
+    &:hover {
+      box-shadow: 0 6px 24px rgba(99, 102, 241, 0.1);
+      transform: translateY(-2px);
+    }
   }
   
   .mindmap-container {
     position: relative;
-    height: calc(100vh - 200px);
+    height: calc(100vh - 220px);
     min-height: 500px;
     background-color: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
+    border-radius: 12px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
     overflow: hidden;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(99, 102, 241, 0.1);
+    
+    &:hover {
+      box-shadow: 0 8px 30px rgba(99, 102, 241, 0.12);
+    }
     
     .mindmap {
       width: 100%;
       height: 100%;
+      transition: all 0.3s ease;
+      
+      /* 自定义思维导图节点样式 */
+      :deep(.smm-node) {
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        
+        &:hover {
+          transform: scale(1.02);
+          filter: brightness(1.05);
+          z-index: 10;
+        }
+      }
+      
+      /* 自定义连接线动画 */
+      :deep(.smm-line) {
+        transition: all 0.4s ease;
+        stroke-dasharray: 0;
+        animation: flowLine 1.5s ease-in-out infinite alternate;
+      }
     }
     
     .loading-overlay {
@@ -324,12 +437,16 @@ onBeforeUnmount(() => {
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      background-color: rgba(255, 255, 255, 0.8);
+      background-color: rgba(255, 255, 255, 0.9);
+      backdrop-filter: blur(4px);
       z-index: 10;
+      transition: all 0.3s ease;
       
       p {
-        margin-top: 16px;
-        color: #606266;
+        margin-top: 18px;
+        color: #6366f1;
+        font-size: 16px;
+        font-weight: 500;
       }
     }
     
@@ -338,27 +455,56 @@ onBeforeUnmount(() => {
       display: flex;
       justify-content: center;
       align-items: center;
+      transition: all 0.3s ease;
     }
   }
   
   .material-preview {
-    padding: 16px;
+    padding: 24px;
     
     h2 {
       margin-top: 0;
-      margin-bottom: 16px;
-      font-size: 20px;
+      margin-bottom: 18px;
+      font-size: 22px;
       color: #303133;
+      background: linear-gradient(45deg, #6366f1, #8b5cf6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      transition: all 0.3s ease;
     }
     
     p {
-      margin-bottom: 24px;
+      margin-bottom: 28px;
       color: #606266;
-      line-height: 1.6;
+      line-height: 1.7;
+      font-size: 15px;
+      padding: 16px;
+      background-color: #f9fafc;
+      border-radius: 8px;
+      border-left: 3px solid #6366f1;
+      transition: all 0.3s ease;
+      
+      &:hover {
+        background-color: #f0f4ff;
+        transform: translateX(4px);
+      }
     }
     
     .material-actions {
-      margin-top: 24px;
+      margin-top: 28px;
+      
+      .el-button {
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        
+        &:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+        }
+        
+        &:active {
+          transform: translateY(0);
+        }
+      }
     }
   }
   
@@ -367,11 +513,40 @@ onBeforeUnmount(() => {
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 200px;
+    height: 240px;
     
     p {
-      margin-top: 16px;
-      color: #606266;
+      margin-top: 18px;
+      color: #6366f1;
+      font-size: 16px;
+      font-weight: 500;
+    }
+  }
+  
+  /* 添加关键帧动画 */
+  @keyframes flowLine {
+    0% {
+      stroke-dashoffset: 100;
+      stroke-dasharray: 20;
+    }
+    100% {
+      stroke-dashoffset: 0;
+      stroke-dasharray: 10;
+    }
+  }
+  
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+    }
+    50% {
+      transform: scale(1.05);
+      opacity: 0.8;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
     }
   }
 }

@@ -17,7 +17,50 @@ module.exports = {
       },
       {
         test: /\.css$/,
-        use: ['style-loader', 'css-loader'],
+        use: [
+          'style-loader',
+          'css-loader',
+          {
+            loader: 'postcss-loader',
+            options: {
+              postcssOptions: {
+                plugins: [
+                  require('autoprefixer')({
+                    overrideBrowserslist: [
+                      'last 2 versions',
+                      '> 1%',
+                      'not dead'
+                    ]
+                  })
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        test: /\.scss$/,
+        use: [
+          'style-loader',
+          'css-loader',
+          {
+            loader: 'postcss-loader',
+            options: {
+              postcssOptions: {
+                plugins: [
+                  require('autoprefixer')({
+                    overrideBrowserslist: [
+                      'last 2 versions',
+                      '> 1%',
+                      'not dead'
+                    ]
+                  })
+                ]
+              }
+            }
+          },
+          'sass-loader'
+        ]
       },
     ],
   },

@@ -432,9 +432,15 @@ onMounted(() => {
 
 h1 {
   font-size: 24px;
-  font-weight: 500;
+  font-weight: 700;
   margin: 0;
-  color: #303133;
+  background: linear-gradient(135deg, #3a8ee6 0%, #5ca9ff 50%, #7eb9ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  letter-spacing: 0.5px;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .user-info {
@@ -568,9 +574,95 @@ h1 {
 
 .search-section {
   display: flex;
-  margin-bottom: 20px;
-  gap: 10px;
-}
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding: 20px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(64, 158, 255, 0.05) 0%, rgba(102, 177, 255, 0.1) 100%);
+    z-index: -1;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+
+  &:hover {
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+    transform: translateY(-4px);
+
+    &::before {
+      opacity: 1;
+    }
+  }
+  
+  .search-input {
+    flex: 1;
+  }
+  
+  .el-button {
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%);
+    border: none;
+    box-shadow: 0 4px 12px rgba(58, 123, 213, 0.3);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    overflow: hidden;
+
+    &::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      transform: scale(0.5);
+    }
+
+    &:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 20px rgba(58, 123, 213, 0.4);
+      
+      &::after {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
+
+    &:active {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(58, 123, 213, 0.3);
+    }
+  }
+  
+  .create-btn {
+    background: linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%);
+    box-shadow: 0 4px 12px rgba(91, 134, 229, 0.3);
+    
+    &:hover {
+      box-shadow: 0 8px 20px rgba(91, 134, 229, 0.4);
+    }
+  }
 
 .search-input {
   flex: 1;
@@ -591,20 +683,55 @@ h1 {
 }
 
 .topic-item {
-  background-color: #fff;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 16px;
   padding: 20px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
   display: flex;
   gap: 20px;
   cursor: pointer;
-  transition: all 0.3s;
-}
+  transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+  position: relative;
+  overflow: hidden;
+  z-index: 1;
+  margin-bottom: 16px;
+  backdrop-filter: blur(10px);
+  
+  &::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(58, 123, 213, 0.05) 0%, rgba(0, 210, 255, 0.05) 100%);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    z-index: -1;
+  }
+  
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.95);
+    transform: translateY(-6px);
+    box-shadow: 0 12px 24px rgba(58, 123, 213, 0.12);
+    
+    &::after {
+      opacity: 1;
+    }
+    
+    .topic-title {
+      background: linear-gradient(135deg, #3a7bd5 0%, #00d2ff 100%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
+    }
+    
+    .topic-avatar {
+      transform: scale(1.1) rotate(5deg);
+    }
+  }
 
-.topic-item:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-}
 
 .topic-content {
   flex: 1;
@@ -733,5 +860,7 @@ h1 {
 
 .el-button:hover {
   transform: translateY(-2px);
+}
+  }
 }
 </style>
