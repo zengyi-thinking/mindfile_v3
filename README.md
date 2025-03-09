@@ -1,6 +1,6 @@
 # 思维导图系统
 
-这是一个基于Vue 3的思维导图系统，提供思维导图创建、编辑、标签搜索等功能。
+这是一个基于 Vue 3 的思维导图系统，提供思维导图创建、编辑、标签搜索等功能。
 
 ## 功能特点
 
@@ -43,17 +43,17 @@ npm run build
 npm run deploy
 ```
 
-## GitHub Pages部署说明
+## GitHub Pages 部署说明
 
-本项目已配置为可以直接部署到GitHub Pages：
+本项目已配置为可以直接部署到 GitHub Pages：
 
-1. 项目已在vite.config.js中设置了正确的base路径：`/mindfile_v3/`
-2. 已安装gh-pages包并在package.json中添加了deploy脚本
-3. 已配置GitHub Actions自动部署工作流（.github/workflows/deploy.yml）
+1. 项目已在 vite.config.js 中设置了正确的 base 路径：`/mindfile_v3/`
+2. 已安装 gh-pages 包并在 package.json 中添加了 deploy 脚本
+3. 已配置 GitHub Actions 自动部署工作流（.github/workflows/deploy.yml）
 
-当推送代码到main分支时，GitHub Actions会自动构建项目并部署到gh-pages分支。
+当推送代码到 main 分支时，GitHub Actions 会自动构建项目并部署到 gh-pages 分支。
 
-访问地址：https://[用户名].github.io/mindfile_v3/
+访问地址：https://zengyi-thinking.github.io/mindfile_v3/
 
 ## 许可证
 
