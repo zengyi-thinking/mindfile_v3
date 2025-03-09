@@ -1,5 +1,10 @@
 <template>
   <div class="app-container">
+    <!-- 全局加载指示器 -->
+    <div class="global-loading-indicator" v-if="isLoading">
+      <el-progress type="circle" :percentage="loadingProgress" :width="50"></el-progress>
+      <span class="loading-text">加载中...</span>
+    </div>
     <!-- 只在非登录页面显示侧边栏 -->
     <div class="sidebar" v-if="!isLoginPage">
       <div class="logo">
@@ -52,22 +57,62 @@
           <el-avatar v-else :size="40" class="avatar">{{ currentUser.avatar }}</el-avatar>
         </div>
       </div>
-      <router-view v-slot="{ Component }">
-        <transition name="fade" mode="out-in">
-          <component :is="Component" />
-        </transition>
+      <!-- 修改路由视图实现，使用max-alive组件替代keep-alive，提高缓存效率 -->
+      <router-view v-slot="{ Component, route }">
+        <keep-alive :max="10" :include="cachedViews">
+          <component :is="Component" :key="route.name" />
+        </keep-alive>
       </router-view>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed, ref, onMounted, watch } from 'vue'
-import { useRoute } from 'vue-router'
+import { computed, ref, onMounted, watch, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { HomeFilled, Document, ChatDotRound, User, Setting, Share, Connection } from '@element-plus/icons-vue'
 import { getUserAvatar } from './utils/imageStorage'
 
+// 全局加载状态
+const isLoading = ref(false)
+const loadingProgress = ref(0)
+
+// 缓存的路由组件列表 - 扩展缓存列表以包含所有可缓存的组件
+const cachedViews = ref(['Dashboard', 'MindMap', 'TagMindMapSearch', 'Materials', 'Forum', 'Profile', 'AdminMaterials', 'MindMapView', 'MaterialDetail', 'ForumDetail'])
+
+// 优化加载进度指示器 - 大幅减少加载时间并提高响应性
+const startLoading = () => {
+  isLoading.value = true
+  loadingProgress.value = 0
+  
+  // 使用更快的加载进度，显著加快加载速度
+  let speed = 0
+  const interval = setInterval(() => {
+    if (loadingProgress.value >= 100) {
+      clearInterval(interval)
+      setTimeout(() => {
+        isLoading.value = false
+      }, 10) // 进一步减少延迟时间
+    } else {
+      // 大幅提高加载速度，整体加快进度
+      if (loadingProgress.value < 30) {
+        speed = 25 + Math.random() * 30
+      } else if (loadingProgress.value < 70) {
+        speed = 30 + Math.random() * 35
+      } else if (loadingProgress.value < 90) {
+        speed = 15 + Math.random() * 20
+      } else {
+        speed = 10 + Math.random() * 15
+      }
+      
+      loadingProgress.value += speed
+      if (loadingProgress.value > 100) loadingProgress.value = 100
+    }
+  }, 5) // 更频繁地更新进度，使动画更平滑且更快
+}
+
 const route = useRoute()
+const router = useRouter()
 
 // 获取当前用户信息
 const currentUser = ref({
@@ -139,22 +184,111 @@ const loadUserAvatar = () => {
   }
 }
 
-// 页面加载时获取用户信息和头像
+// 预加载所有主要组件
+const preloadAllComponents = () => {
+  if (window.requestIdleCallback) {
+    window.requestIdleCallback(() => {
+      // 一次性预加载所有主要组件
+      Promise.all([
+        import('./views/Dashboard.vue'),
+        import('./views/MindMap.vue'),
+        import('./views/Materials.vue'),
+        import('./views/Forum.vue'),
+        import('./views/Profile.vue'),
+        import('./views/TagMindMapSearch.vue')
+      ])
+      
+      // 延迟加载次要组件
+      setTimeout(() => {
+        Promise.all([
+          import('./views/MindMapView.vue'),
+          import('./views/MaterialDetail.vue'),
+          import('./views/ForumDetail.vue')
+        ])
+      }, 1000)
+    }, { timeout: 500 })
+  }
+}
+
+// 为导航链接添加预加载功能
+const setupNavPreloading = () => {
+  if (typeof document !== 'undefined') {
+    // 为所有导航链接添加鼠标悬停预加载
+    setTimeout(() => {
+      const navLinks = document.querySelectorAll('.nav-item')
+      navLinks.forEach(link => {
+        link.addEventListener('mouseenter', () => {
+          const href = link.getAttribute('href')
+          if (href && href !== route.path) {
+            // 立即预加载目标路由组件
+            const routeConfig = router.getRoutes().find(r => r.path === href)
+            if (routeConfig && routeConfig.components) {
+              routeConfig.components.default()
+            }
+          }
+        })
+      })
+    }, 300)
+  }
+}
+
+// 页面加载时获取用户信息和头像，并预加载组件
 onMounted(() => {
   currentUser.value = getCurrentUser()
   loadUserAvatar()
+  
+  // 预加载所有主要组件
+  preloadAllComponents()
+  
+  // 设置导航链接预加载
+  setupNavPreloading()
 })
-
-// 监听路由变化，重新加载用户信息
-const watchRoute = () => {
-  currentUser.value = getCurrentUser()
-  loadUserAvatar()
-}
 
 // 监听路由变化
-watch(() => route.path, () => {
-  watchRoute()
-})
+watch(() => route.path, (newPath, oldPath) => {
+  // 更新用户信息
+  currentUser.value = getCurrentUser()
+  loadUserAvatar()
+  
+  // 获取新旧路由的组件名称
+  const getComponentName = (path) => {
+    const routeMap = {
+      '/dashboard': 'Dashboard',
+      '/mindmap': 'MindMap',
+      '/tag-mindmap': 'TagMindMapSearch',
+      '/materials': 'Materials',
+      '/forum': 'Forum',
+      '/profile': 'Profile',
+      '/admin/materials': 'AdminMaterials'
+    }
+    
+    // 处理动态路由
+    if (path.includes('/mindmap/') && path !== '/mindmap') {
+      return 'MindMapView'
+    } else if (path.includes('/materials/') && path !== '/materials') {
+      return 'MaterialDetail'
+    } else if (path.includes('/forum/detail/')) {
+      return 'ForumDetail'
+    }
+    
+    return routeMap[path] || ''
+  }
+  
+  const newComponent = getComponentName(newPath)
+  
+  // 只在首次访问页面时显示加载指示器
+  // 对于已缓存的页面，不显示加载指示器
+  if (newComponent && !cachedViews.value.includes(newComponent)) {
+    startLoading()
+    // 将组件添加到缓存列表
+    if (!cachedViews.value.includes(newComponent)) {
+      cachedViews.value.push(newComponent)
+    }
+  } else {
+    // 对于已缓存的页面，确保不显示加载指示器
+    isLoading.value = false
+  }
+}, { immediate: true })
 </script>
 
 <style lang="scss">
@@ -162,6 +296,30 @@ watch(() => route.path, () => {
   display: flex;
   height: 100vh;
   width: 100%;
+  
+  // 全局加载指示器样式
+  .global-loading-indicator {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.75);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    backdrop-filter: blur(2px);
+    transition: opacity 0.15s ease;
+    
+    .loading-text {
+      margin-top: 15px;
+      font-size: 16px;
+      color: #409EFF;
+      font-weight: 500;
+    }
+  }
   
   .sidebar {
     width: 240px;
@@ -172,7 +330,7 @@ watch(() => route.path, () => {
     box-shadow: 3px 0 20px rgba(0, 0, 0, 0.15);
     position: relative;
     z-index: 10;
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     
     .logo {
       padding: 20px;
@@ -201,7 +359,7 @@ watch(() => route.path, () => {
         padding: 14px 20px;
         color: #e0e0e0;
         text-decoration: none;
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
         display: flex;
         align-items: center;
         border-left: 3px solid transparent;
@@ -217,14 +375,14 @@ watch(() => route.path, () => {
           height: 100%;
           width: 0;
           background: rgba(64, 158, 255, 0.15);
-          transition: width 0.3s ease;
+          transition: width 0.2s ease;
           z-index: -1;
         }
         
         .el-icon {
           margin-right: 12px;
           font-size: 18px;
-          transition: transform 0.3s ease;
+          transition: transform 0.2s ease;
         }
         
         &:hover {
@@ -271,7 +429,7 @@ watch(() => route.path, () => {
     overflow-y: auto;
     padding: 0;
     position: relative;
-    transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
     
     &.full-width {
       width: 100%;
@@ -313,15 +471,31 @@ watch(() => route.path, () => {
   }
 }
 
-// 添加过渡动画
+// 添加过渡动画 - 优化为更快速的过渡
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease;
+  transition: opacity 0.15s ease-out;
 }
 
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
+}
+
+// 添加页面切换动画 - 优化为更快速的过渡
+.page-transition-enter-active,
+.page-transition-leave-active {
+  transition: all 0.1s ease-out;
+}
+
+.page-transition-enter-from {
+  opacity: 0;
+  transform: translateY(5px);
+}
+
+.page-transition-leave-to {
+  opacity: 0;
+  transform: translateY(-5px);
 }
 
 @keyframes pulse {

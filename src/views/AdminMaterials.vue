@@ -197,6 +197,29 @@ import { Document, Picture, VideoCamera, Files, Edit, Download, Delete, Search, 
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { getAllMaterials, downloadMaterial, deleteMaterial, searchMaterials } from '../api/materials'
 
+// 从localStorage获取当前用户信息
+const getCurrentUser = () => {
+  const userJson = localStorage.getItem('currentUser')
+  if (userJson) {
+    try {
+      return JSON.parse(userJson)
+    } catch (e) {
+      console.error('解析用户数据失败', e)
+      return {
+        role: '游客',
+        avatar: 'G',
+        username: '游客'
+      }
+    }
+  } else {
+    return {
+      role: '游客',
+      avatar: 'G',
+      username: '游客'
+    }
+  }
+}
+
 const searchQuery = ref('')
 const fileType = ref('all')
 const uploaderFilter = ref('all')
@@ -432,6 +455,15 @@ const confirmBatchDelete = async () => {
 
 // 初始加载
 onMounted(() => {
+  // 确保获取最新的用户信息
+  currentUser.value = getCurrentUser()
+  
+  // 检查用户是否为管理员
+  if (currentUser.value.role !== '管理员') {
+    ElMessage.warning('您没有管理员权限，无法访问此页面')
+    // 可以在这里添加重定向逻辑
+  }
+  
   loadMaterials()
 })
 </script>

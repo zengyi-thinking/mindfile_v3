@@ -108,7 +108,7 @@
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { hierarchicalTags, getPrimaryCategories, getSecondaryCategories, getTertiaryTags } from '../config/tags';
-import { searchMindmapsByTags } from '../api/tagBasedMindmap';
+import { searchMindmapsByTags, generateMindmapFromTags, getMaterialsByTagPath } from '../api/tagBasedMindmap';
 import { ElMessage } from 'element-plus';
 
 const router = useRouter();
@@ -166,8 +166,41 @@ const viewMindmap = (id) => {
 };
 
 // 创建新思维导图
-const createNewMindmap = () => {
-  router.push('/mindmap/new');
+const createNewMindmap = async () => {
+  // 如果有选择标签路径，则基于标签创建思维导图
+  if (selectedTagPath.value.length > 0) {
+    loading.value = true;
+    try {
+      // 获取与标签相关的资料
+      const materials = await getMaterialsByTagPath(selectedTagPath.value);
+      
+      if (materials.length === 0) {
+        ElMessage.warning('未找到与该标签相关的资料，无法创建思维导图');
+        return;
+      }
+      
+      // 生成思维导图
+      const result = await generateMindmapFromTags(selectedTagPath.value, materials);
+      
+      // 显示成功消息
+      if (result.isNew) {
+        ElMessage.success('思维导图创建成功');
+      } else {
+        ElMessage.success('思维导图更新成功');
+      }
+      
+      // 跳转到思维导图查看页面
+      router.push(`/mindmap/${result.mindmap.id}`);
+    } catch (error) {
+      console.error('创建思维导图出错:', error);
+      ElMessage.error('创建思维导图失败');
+    } finally {
+      loading.value = false;
+    }
+  } else {
+    // 如果没有选择标签路径，则跳转到普通的创建页面
+    ElMessage.warning('请先选择标签路径');
+  }
 };
 </script>
 
