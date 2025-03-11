@@ -3,7 +3,7 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches:
-      - main # ������ʹ�õ�����֧����
+      - main # 确保这是您使用的主分支名称
 
 jobs:
   deploy:
@@ -31,7 +31,6 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist # ȷ���������Ĺ������Ŀ¼
-          cname: ${{ secrets.CNAME }}
+          publish_dir: ./dist # 确保这是您的构建输出目录
           full_commit_message: ${{ github.event.head_commit.message }}
           force_orphan: true
